@@ -119,6 +119,11 @@ function run_test() {
     }'
     curl_with_retry GET http://localhost:9600/owner/accounts/dan/transactions | jq
     curl_with_retry GET http://localhost:9500/owner/accounts/alice/transactions | jq
+    curl_with_retry POST http://localhost:9500/owner/accounts/alice/redeem -d '{
+        "amount": {"code": "TOK","value": 50},
+        "message": "redeem test"
+    }'
+    curl_with_retry GET http://localhost:9500/owner/accounts/alice | jq
 }
 
 # Script Start
