@@ -58,12 +58,16 @@ function run_test() {
     }'
     curl -f -X GET http://localhost:9600/owner/accounts/dan/transactions | jq
     curl -f -X GET http://localhost:9500/owner/accounts/alice/transactions | jq
+    curl -f -X POST http://localhost:9500/owner/accounts/alice/redeem -d '{
+        "amount": {"code": "TOK","value": 50},
+        "message": "redeem test"
+    }'
+    curl -f -X GET http://localhost:9500/owner/accounts/alice | jq
 }
 
 # Script Start
-set +e
-set -o pipefail
-trap exit 1 INT
+set -eo pipefail
+trap cleanup ERR INT
 
 run_network
 # # currently we wait manually with a sleep.
