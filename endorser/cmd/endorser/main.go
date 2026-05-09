@@ -76,7 +76,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	flogging.Init(cfg.Logging)
 	logger := flogging.MustGetLogger("main")
-	logger.Infof("starting endorser", parser.ConfigFileUsed())
+	logger.Infof("starting endorser (config: %v)", parser.ConfigFileUsed())
 
 	// Create service
 	executors := map[string]service.Executor{
