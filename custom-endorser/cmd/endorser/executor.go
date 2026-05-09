@@ -10,7 +10,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hyperledger/fabric-x-samples/sdk-endorser/service"
+	"github.com/hyperledger/fabric-x-samples/custom-endorser/service"
 	"github.com/hyperledger/fabric-x-sdk/endorsement"
 )
 

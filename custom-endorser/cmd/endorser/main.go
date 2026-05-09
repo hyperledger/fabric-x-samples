@@ -16,8 +16,8 @@ import (
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
 	"github.com/hyperledger/fabric-x-committer/utils/connection"
 	"github.com/hyperledger/fabric-x-common/common/viperutil"
-	"github.com/hyperledger/fabric-x-samples/sdk-endorser/config"
-	"github.com/hyperledger/fabric-x-samples/sdk-endorser/service"
+	"github.com/hyperledger/fabric-x-samples/custom-endorser/config"
+	"github.com/hyperledger/fabric-x-samples/custom-endorser/service"
 	"github.com/spf13/cobra"
 )
 

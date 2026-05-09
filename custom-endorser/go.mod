@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-module github.com/hyperledger/fabric-x-samples/sdk-endorser
+module github.com/hyperledger/fabric-x-samples/custom-endorser
 
 go 1.26.2
 

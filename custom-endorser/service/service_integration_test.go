@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/fabric-x-samples/custom-endorser/config"
+	"github.com/hyperledger/fabric-x-samples/custom-endorser/service"
 	sdk "github.com/hyperledger/fabric-x-sdk"
 	"github.com/hyperledger/fabric-x-sdk/endorsement"
-	"github.com/hyperledger/fabric-x-samples/sdk-endorser/config"
-	"github.com/hyperledger/fabric-x-samples/sdk-endorser/service"
 	"github.com/hyperledger/fabric-x-sdk/fabrictest"
 	"github.com/hyperledger/fabric-x-sdk/identity"
 	"github.com/hyperledger/fabric-x-sdk/network"
