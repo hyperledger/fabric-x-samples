@@ -26,6 +26,10 @@ func (SampleExecutor) Execute(ctx context.Context, newStore service.StoreFactory
 		return endorsement.ExecutionResult{}, fmt.Errorf("simulation store: %w", err)
 	}
 
+	if len(inv.Args) == 0 {
+		return endorsement.BadRequest("no function specified"), nil
+	}
+
 	// The first argument is usually used as the "function".
 	switch string(inv.Args[0]) {
 	case "get":
