@@ -163,7 +163,7 @@ func (s *Service) Run(ctx context.Context) error {
 	return nil
 }
 
-// ProcessPropasal is the API for incoming requests.
+// ProcessProposal is the API for incoming requests.
 func (s *Service) ProcessProposal(ctx context.Context, prop *peer.SignedProposal) (*peer.ProposalResponse, error) {
 	// parse and validate
 	inv, err := endorsement.Parse(prop, time.Now())
