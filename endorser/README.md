@@ -1,7 +1,7 @@
-# Endorser – Example Fabric-X Service
+# Custom Endorser Example
 
-This example shows how to build a custom endorser service using the
-[fabric-x-sdk](https://github.com/hyperledger/fabric-x-sdk/). An endorser is like chaincode in
+This example shows how to build a custom endorser application using the
+[fabric-x-sdk](https://github.com/hyperledger/fabric-x-sdk/). An endorser is like a peer executing chaincode in
 classic Fabric: it receives transaction proposals, reads and writes world state through a
 `SimulationStore`, and returns signed read/write sets. Unlike chaincode, it runs as a standalone
 gRPC service — outside the peer, in your own process.
