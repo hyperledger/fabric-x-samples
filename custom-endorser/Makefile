@@ -21,6 +21,10 @@ start-network:
 stop-network:
 	@docker compose down
 
+.PHONY: test
+test:
+	@go test -short ./...
+
 .PHONY: build
 build:
 	@go build -o bin/endorser ./cmd/endorser

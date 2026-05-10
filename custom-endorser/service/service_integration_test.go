@@ -47,7 +47,6 @@ func TestFabricXCommitter(t *testing.T) {
 		t.Skip("skipping fabric-x committer tests in short mode")
 	}
 	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, os.Stderr, os.Stderr)) // silence GRPC logging
-
 	runAll(t, newTestCommitterSetup(t))
 }
 
