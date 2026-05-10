@@ -17,17 +17,17 @@ logic.
 
 ## Quick Start
 
-### 1. Generate crypto material and start the test network
-
-```shell
-make init    # generate TLS certs and MSP material (only once)
-make start # start committer + orderer in Docker
-```
-
-### 2. Build
+### 1. Build
 
 ```shell
 make build   # compiles bin/endorser and bin/client
+```
+
+### 2. Generate crypto material and start the test network
+
+```shell
+make init-network    # generate TLS certs and MSP material (only once)
+make start-network # start committer + orderer in Docker
 ```
 
 ### 3. Start the endorsers
@@ -36,16 +36,22 @@ Run each in a **separate terminal** — logs stream to stdout so you can see wha
 
 **Terminal 1**
 ```shell
-./bin/endorser -c sampleconfig/endorser1.yaml
+./bin/endorser -c sampleconfig/endorser-org1.yaml
 ```
 
 **Terminal 2**
 ```shell
-./bin/endorser -c sampleconfig/endorser2.yaml
+./bin/endorser -c sampleconfig/endorser-org2.yaml
 ```
 
 Each endorser logs `starting endorser` and then listens for proposals (endorser1 on `:9001`,
 endorser2 on `:9002`).
+
+> [!NOTE]  
+> Our "network" consists of two organizations, as defined in [testdata/crypto-config.yaml](./testdata/crypto-config.yaml).
+> The fact that we need two endorsers is defined by the endorsement policy in
+> fxconfig-init container: `--policy=AND('Org1MSP.member', 'Org2MSP.member')`. It means both
+> organizations have to sign the read/write set for it to be accepted on the ledger.
 
 ### 4. Send a transaction
 
@@ -65,10 +71,10 @@ function name as the first element, or a `{"function": "...", "Args": [...]}` ob
 
 ### 5. Tear down
 
-Stop the running endorsers. Then stop the test container.
+Stop the running endorsers by pressing CTRL+C. Then stop the test container.
 
 ```shell
-make stop  # stop the Docker test network
+make stop-network  # stop the Docker test network
 ```
 
 ## Writing Your Own Executor
@@ -136,7 +142,7 @@ and crypto material used by the test environment.
 Any config field can be overridden with the `ENDORSER_` prefix:
 
 ```shell
-ENDORSER_SERVER_ENDPOINT_PORT=8080 ./bin/endorser -c sampleconfig/endorser1.yaml
+ENDORSER_SERVER_ENDPOINT_PORT=8080 ./bin/endorser -c sampleconfig/endorser-org1.yaml
 ```
 
 ## Core Dependencies

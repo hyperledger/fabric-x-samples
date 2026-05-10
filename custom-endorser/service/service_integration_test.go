@@ -10,7 +10,10 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"io"
 	"net"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +27,7 @@ import (
 	nfab "github.com/hyperledger/fabric-x-sdk/network/fabric"
 	nfabx "github.com/hyperledger/fabric-x-sdk/network/fabricx"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 )
 
 // --- backends ---
@@ -42,6 +46,7 @@ func TestFabricXCommitter(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping fabric-x committer tests in short mode")
 	}
+	grpclog.SetLoggerV2(grpclog.NewLoggerV2(io.Discard, os.Stderr, os.Stderr)) // silence GRPC logging
 
 	runAll(t, newTestCommitterSetup(t))
 }
@@ -78,7 +83,7 @@ func newWithTestBackend(t *testing.T, networkType string) *endorserSetup {
 		},
 	}
 
-	return newSetup(t, cfg, testSigner{}, testSigner{}, fmt.Sprintf("127.0.0.1:%d", fnet.OrdererPort), "basic")
+	return newSetup(t, cfg, []sdk.Signer{testSigner{}}, testSigner{}, fmt.Sprintf("127.0.0.1:%d", fnet.OrdererPort), "basic")
 }
 
 // newTestCommitterSetup returns a test setup pointed at a running Fabric-X committer.
@@ -104,41 +109,48 @@ func newTestCommitterSetup(t *testing.T) *endorserSetup {
 			Endpoint: &config.Endpoint{Host: "127.0.0.1", Port: 4001},
 			TLS: config.TLSConfig{
 				Mode:        "mtls",
-				CACertPaths: []string{"../../../../testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt"},
-				CertPath:    "../../../../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/tls/client.crt",
-				KeyPath:     "../../../../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/tls/client.key",
+				CACertPaths: []string{"../testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt"},
+				CertPath:    "../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/tls/client.crt",
+				KeyPath:     "../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/tls/client.key",
 			},
 		},
 	}
 
-	serviceSigner, err := identity.SignerFromMSP(
-		"../../../../testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/msp",
+	org1ServiceSigner, err := identity.SignerFromMSP(
+		"../testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/msp",
 		"Org1MSP",
 	)
 	if err != nil {
-		t.Fatalf("SignerFromMSP (service): %v", err)
+		t.Fatalf("SignerFromMSP (service org1): %v", err)
+	}
+
+	org2ServiceSigner, err := identity.SignerFromMSP(
+		"../testdata/crypto/peerOrganizations/Org2/peers/endorser.org2.example.com/msp",
+		"Org2MSP",
+	)
+	if err != nil {
+		t.Fatalf("SignerFromMSP (service org2): %v", err)
 	}
 
 	clientSigner, err := identity.SignerFromMSP(
-		"../../../../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/msp",
+		"../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/msp",
 		"Org1MSP",
 	)
 	if err != nil {
 		t.Fatalf("SignerFromMSP (client): %v", err)
 	}
 
-	return newSetup(t, cfg, serviceSigner, clientSigner, ordererAddr, "basic")
+	return newSetup(t, cfg, []sdk.Signer{org1ServiceSigner, org2ServiceSigner}, clientSigner, ordererAddr, "mynamespace")
 }
 
 // newSetup creates a new endorserSetup.
-// serviceSigner is used by the endorser service (signs endorsements).
+// serviceSigners are used by endorser service instances (one gRPC server is started per signer).
 // clientSigner is used by the test client (signs proposals and the transaction envelope).
-// Using distinct signers reflects the real deployment where the endorser service and
+// Using distinct signers reflects the real deployment where endorser services and
 // the submitting client are different parties with different MSP identities.
-func newSetup(t *testing.T, cfg config.Config, serviceSigner, clientSigner sdk.Signer, ordererAddr, namespace string) *endorserSetup {
+func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clientSigner sdk.Signer, ordererAddr, namespace string) *endorserSetup {
 	t.Helper()
 
-	// Create service
 	executors := map[string]service.Executor{
 		namespace: kvExecutor{},
 	}
@@ -146,45 +158,51 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigner, clientSigner sdk.S
 		ChannelID: cfg.ChannelID,
 		Protocol:  cfg.Protocol,
 		Committer: cfg.Committer.ToPeerConf(),
-		DBConnStr: cfg.Database.ConnStr,
-	}
-	svc, err := service.NewWithSigner(svcCfg, serviceSigner, executors, sdk.NewTestLogger(t, "endorser"))
-	if err != nil {
-		t.Fatalf("NewWithSigner: %v", err)
 	}
 
-	// Start synchronizer
 	syncCtx, syncCancel := context.WithCancel(t.Context())
 	t.Cleanup(syncCancel)
-	go svc.Run(syncCtx) //nolint:errcheck
 
-	// Start gRPC server
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	grpcSrv := grpc.NewServer()
-	svc.RegisterService(grpcSrv)
-	go grpcSrv.Serve(lis) //nolint:errcheck
-	t.Cleanup(grpcSrv.Stop)
+	// Start one endorser service per signer, collecting their gRPC addresses.
+	var svcs []*service.Service
+	var peerConfs []network.PeerConf
+	for i, signer := range serviceSigners {
+		// Each service gets its own DB so concurrent syncs don't conflict.
+		svcCfgI := svcCfg
+		svcCfgI.DBConnStr = strings.Replace(cfg.Database.ConnStr, "?", fmt.Sprintf("_%d?", i), 1)
 
-	// Create endorsement client
-	ec, err := network.NewEndorsementClient(
-		[]network.PeerConf{{
+		svc, err := service.NewWithSigner(svcCfgI, signer, executors, sdk.NewTestLogger(t, fmt.Sprintf("endorser-%d", i)))
+		if err != nil {
+			t.Fatalf("NewWithSigner: %v", err)
+		}
+		svcs = append(svcs, svc)
+
+		go svc.Run(syncCtx) //nolint:errcheck
+
+		lis, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("listen: %v", err)
+		}
+		grpcSrv := grpc.NewServer()
+		svc.RegisterService(grpcSrv)
+		go grpcSrv.Serve(lis) //nolint:errcheck
+		t.Cleanup(grpcSrv.Stop)
+
+		peerConfs = append(peerConfs, network.PeerConf{
 			Address: lis.Addr().String(),
 			TLS:     network.TLSConfig{Mode: network.TLSModeNone},
-		}},
-		clientSigner, cfg.ChannelID, namespace, "1.0",
-	)
+		})
+	}
+
+	// Create endorsement client targeting all endorser instances.
+	ec, err := network.NewEndorsementClient(peerConfs, clientSigner, cfg.ChannelID, namespace, "1.0")
 	if err != nil {
 		t.Fatalf("NewEndorsementClient: %v", err)
 	}
 	t.Cleanup(func() { ec.Close() }) //nolint:errcheck
 
-	// Create submitter
+	// Create submitter using the same TLS config as the committer connection.
 	log := sdk.NewTestLogger(t, "endorser-test")
-
-	// Use the same TLS config for orderer as for committer
 	orderers := []network.OrdererConf{{
 		Address: ordererAddr,
 		TLS:     cfg.Committer.ToPeerConf().TLS,
@@ -202,13 +220,15 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigner, clientSigner sdk.S
 	}
 	t.Cleanup(func() { submitter.Close() }) //nolint:errcheck
 
-	svc.WaitForReady(t.Context())
+	for _, svc := range svcs {
+		svc.WaitForReady(t.Context())
+	}
 
 	return &endorserSetup{
-		svc:          svc,
+		svc:          svcs[0],
 		ec:           ec,
 		namespace:    namespace,
-		endorserAddr: lis.Addr().String(),
+		endorserAddr: peerConfs[0].Address,
 		submitter:    submitter,
 		networkType:  cfg.Protocol,
 		ordererAddr:  ordererAddr,
@@ -227,18 +247,24 @@ func (s *endorserSetup) proposeAndSubmit(t *testing.T, args [][]byte) {
 	}
 }
 
-// waitForBlock polls svc.readDB until the block number is >= minBlock.
-func (s *endorserSetup) waitForBlock(t *testing.T, minBlock uint64, timeout time.Duration) {
+// waitForValue polls the endorser via ExecuteTransaction until the given key
+// returns the expected value, or the timeout elapses. This is intentionally
+// block-agnostic: with a real Fabric-X committer, blocks are cut on a timer
+// so the write may land in block N+k (k > 1), and waiting for a fixed block
+// number would be racy.
+func (s *endorserSetup) waitForValue(t *testing.T, key, expected string, timeout time.Duration) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		n, _ := s.svc.BlockNumber(t.Context())
-		if n >= minBlock {
-			return
+		end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte(key)})
+		if err == nil && len(end.Responses) > 0 {
+			if got := string(end.Responses[0].Response.Payload); got == expected {
+				return
+			}
 		}
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
-	t.Fatalf("timed out waiting for block %d", minBlock)
+	t.Fatalf("timed out waiting for key %q to have value %q", key, expected)
 }
 
 // --- test executor ---
@@ -310,20 +336,8 @@ func runAll(t *testing.T, s *endorserSetup) {
 func testEndorserSetAndGet(t *testing.T, s *endorserSetup) {
 	key := t.Name() + "/" + rand.Text()
 
-	currentBlock, _ := s.svc.BlockNumber(t.Context())
 	s.proposeAndSubmit(t, [][]byte{[]byte(key), []byte("hello")})
-	s.waitForBlock(t, currentBlock+1, 5*time.Second)
-
-	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte(key)})
-	if err != nil {
-		t.Fatalf("ExecuteTransaction get: %v", err)
-	}
-	if len(end.Responses) == 0 {
-		t.Fatal("no endorsement responses")
-	}
-	if got := string(end.Responses[0].Response.Payload); got != "hello" {
-		t.Fatalf("expected %q, got %q", "hello", got)
-	}
+	s.waitForValue(t, key, "hello", 5*time.Second)
 }
 
 // testEndorserGetMissingKey confirms that getting an absent key returns an empty payload without error.
@@ -386,22 +400,10 @@ func testEndorserWrongChannel(t *testing.T, s *endorserSetup) {
 func testEndorserSetThenOverwrite(t *testing.T, s *endorserSetup) {
 	key := t.Name() + "/" + rand.Text()
 
-	currentBlock, _ := s.svc.BlockNumber(t.Context())
 	s.proposeAndSubmit(t, [][]byte{[]byte(key), []byte("first")})
-	s.waitForBlock(t, currentBlock+1, 5*time.Second)
+	s.waitForValue(t, key, "first", 5*time.Second)
 	s.proposeAndSubmit(t, [][]byte{[]byte(key), []byte("second")})
-	s.waitForBlock(t, currentBlock+2, 5*time.Second)
-
-	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte(key)})
-	if err != nil {
-		t.Fatalf("ExecuteTransaction get: %v", err)
-	}
-	if len(end.Responses) == 0 {
-		t.Fatal("no endorsement responses")
-	}
-	if got := string(end.Responses[0].Response.Payload); got != "second" {
-		t.Fatalf("expected %q, got %q", "second", got)
-	}
+	s.waitForValue(t, key, "second", 5*time.Second)
 }
 
 // --- special tests ---

@@ -2,7 +2,7 @@ name: fabric-x-test-committer
 
 services:
   test-committer:
-    image: docker.io/hyperledger/fabric-x-committer-test-node:0.1.9
+    image: ghcr.io/hyperledger/fabric-x-committer-test-node:0.1.9
     pull_policy: missing
     restart: unless-stopped
     container_name: fabric-x-committer-test-node
@@ -33,7 +33,7 @@ services:
       SC_QUERY_SERVICE_SERVER_ENDPOINT: ":7001"
       SC_ORDERER_BLOCK_SIZE: "1"
     healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 7001" ]
+      test: ["CMD-SHELL", "nc -z localhost 7001"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -44,7 +44,7 @@ services:
           - committer
 
   fxconfig-init:
-    image: docker.io/hyperledger/fabric-x-tools:0.0.15
+    image: ghcr.io/hyperledger/fabric-x-tools:0.0.15
     pull_policy: missing
     container_name: fxconfig-init
     entrypoint:
