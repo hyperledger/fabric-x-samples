@@ -4,14 +4,17 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-name: Sample Tests
+name: Token Sample Tests
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
+    paths: [ "tokens/**" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
+    paths: [ "tokens/**" ]
   workflow_dispatch:
+
 
 jobs:
   test:
