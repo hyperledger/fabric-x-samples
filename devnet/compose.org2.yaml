@@ -1,0 +1,123 @@
+# Org2 committer stack (6 containers) — mirrors the Org1 committer services for org2.example.com.
+# Org2MSP is in the genesis block (see configtx.yaml Application.Organizations).
+#
+# Start together with the default stack:
+#   docker compose -f compose.yaml -f compose.org2.yaml up -d
+
+networks:
+  fabric-x:
+    name: fabric-x
+
+services:
+  committer-org2-db:
+    image: docker.io/library/postgres:18.3-alpine3.23
+    pull_policy: missing
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sc_db
+      POSTGRES_USER: sc_user
+      POSTGRES_PASSWORD: sc_secret_pwd
+    volumes:
+      - ./data/committer-org2/db:/var/lib/postgresql:U,Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sc_user -d sc_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fabric-x
+
+  committer-org2-verifier:
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    pull_policy: missing
+    restart: unless-stopped
+    command: start verifier --config=/config/verifier.yaml
+    volumes:
+      - ./config/committer-verifier.yaml:/config/verifier.yaml:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-verifier.org2.example.com/tls:/node-tls:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
+    networks:
+      - fabric-x
+
+  committer-org2-validator:
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    pull_policy: missing
+    restart: unless-stopped
+    command: start vc --config=/config/validator.yaml
+    volumes:
+      - ./config/committer-validator.yaml:/config/validator.yaml:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-validator.org2.example.com/tls:/node-tls:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
+    environment:
+      SC_VC_DATABASE_ENDPOINTS: committer-org2-db:5432
+    depends_on:
+      committer-org2-db:
+        condition: service_healthy
+    networks:
+      - fabric-x
+
+  committer-org2-coordinator:
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    pull_policy: missing
+    restart: unless-stopped
+    command: start coordinator --config=/config/coordinator.yaml
+    volumes:
+      - ./config/committer-coordinator.yaml:/config/coordinator.yaml:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-coordinator.org2.example.com/tls:/node-tls:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
+    environment:
+      SC_COORDINATOR_VERIFIER_ENDPOINTS: committer-org2-verifier:5001
+      SC_COORDINATOR_VALIDATOR_COMMITTER_ENDPOINTS: committer-org2-validator:6001
+    depends_on:
+      - committer-org2-verifier
+      - committer-org2-validator
+    networks:
+      - fabric-x
+
+  committer-org2-sidecar:
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    pull_policy: missing
+    restart: unless-stopped
+    command: start sidecar --config=/config/sidecar.yaml
+    ports:
+      - "4002:4001"
+    volumes:
+      - ./config/committer-sidecar.yaml:/config/sidecar.yaml:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-sidecar.org2.example.com/tls:/node-tls:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/users/channel_admin@org2.example.com/msp:/msp:ro,Z
+      - ./crypto/ordererOrganizations:/orderer-cas:ro,Z
+      - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
+      - ./data/committer-org2/sidecar-ledger:/ledger:U,Z
+    environment:
+      SC_SIDECAR_ORDERER_IDENTITY_MSP_ID: Org2MSP
+      SC_SIDECAR_COMMITTER_ENDPOINT: committer-org2-coordinator:9001
+    depends_on:
+      - committer-org2-coordinator
+    networks:
+      - fabric-x
+
+  committer-org2-query-service:
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    pull_policy: missing
+    restart: unless-stopped
+    command: start query --config=/config/query-service.yaml
+    ports:
+      - "7002:7001"
+    volumes:
+      - ./config/committer-query-service.yaml:/config/query-service.yaml:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-query-service.org2.example.com/tls:/node-tls:ro,Z
+      - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
+    environment:
+      SC_QUERY_DATABASE_ENDPOINTS: committer-org2-db:5432
+    depends_on:
+      committer-org2-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:2117/metrics"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks:
+      - fabric-x

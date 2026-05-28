@@ -15,7 +15,13 @@ This repository serves as a comprehensive resource for developers looking to:
 
 ## Current samples
 
-### [Tokens Sample](https://github.com/hyperledger/fabric-x-samples/tree/main/tokens)
+### [Fabric-X Devnet](devnet/)
+
+A self-contained local Fabric-X network for development and integration testing.
+Includes a 4-party Arma BFT orderer and a full committer stack, plus a lightweight
+single-container mode for fast iteration.
+
+### [Tokens sample](tokens/)
 
 A complete token management application demonstrating:
 
@@ -26,7 +32,7 @@ A complete token management application demonstrating:
 - Docker Compose and Ansible deployment configurations
 - Support for both Fabric 3.x and Fabric-X environments
 
-### [SDK Endorser](https://github.com/hyperledger/fabric-x-samples/tree/main/endorser)
+### [SDK Endorser](custom-endorser/)
 
 A minimal example of a custom endorser service built with the Fabric-X SDK. Unlike classic
 chaincode, an endorser runs as a standalone gRPC service outside the peer. The sample shows how to
