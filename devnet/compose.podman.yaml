@@ -1,0 +1,51 @@
+# Rootless Podman override — load with COMPOSE_OVERRIDE="-f compose.podman.yaml"
+#
+# Sets user: "0:0" on all fabric-x services. In rootless Podman, container UID 0
+# maps to the host user (not host root), so this is secure and lets containers
+# access host-user-owned crypto and data directories without subUID conflicts.
+#
+# Postgres manages its own user internally and needs no entry here.
+
+services:
+  orderer-party1-router:
+    user: "0:0"
+  orderer-party1-batcher:
+    user: "0:0"
+  orderer-party1-consenter:
+    user: "0:0"
+  orderer-party1-assembler:
+    user: "0:0"
+  orderer-party2-router:
+    user: "0:0"
+  orderer-party2-batcher:
+    user: "0:0"
+  orderer-party2-consenter:
+    user: "0:0"
+  orderer-party2-assembler:
+    user: "0:0"
+  orderer-party3-router:
+    user: "0:0"
+  orderer-party3-batcher:
+    user: "0:0"
+  orderer-party3-consenter:
+    user: "0:0"
+  orderer-party3-assembler:
+    user: "0:0"
+  orderer-party4-router:
+    user: "0:0"
+  orderer-party4-batcher:
+    user: "0:0"
+  orderer-party4-consenter:
+    user: "0:0"
+  orderer-party4-assembler:
+    user: "0:0"
+  committer-verifier:
+    user: "0:0"
+  committer-validator:
+    user: "0:0"
+  committer-coordinator:
+    user: "0:0"
+  committer-sidecar:
+    user: "0:0"
+  committer-query-service:
+    user: "0:0"

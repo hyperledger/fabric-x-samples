@@ -37,7 +37,7 @@ services:
       - ./crypto/peerOrganizations/org1.example.com/peers/committer-test.org1.example.com/tls:/node-tls:ro,Z
       - ./crypto/peerOrganizations/org1.example.com/msp/tlscacerts/tlsca.org1.example.com-cert.pem:/org-tls-ca.pem:ro,Z
       # Sidecar MSP identity
-      - ./crypto/peerOrganizations/org1.example.com/users/channel_admin@org1.example.com/msp:/msp:ro,Z
+      - ./crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp:/msp:ro,Z
       # Override config files (image defaults use built-in crypto at /root/artifacts/)
       - ./config/mock-orderer.yaml:/root/config/mock-orderer.yaml:ro,Z
       - ./config/committer-sidecar-dev.yaml:/root/config/sidecar.yaml:ro,Z
