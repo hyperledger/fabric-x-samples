@@ -1,0 +1,25 @@
+# Foundry config.
+#
+# Two independent uses:
+#   1. Compiling the sample contract (src/Token.sol) — see `make build`.
+#   2. The `fabricx` RPC alias used by `cast`/`forge` in the Makefile demo.
+#
+# solc is pinned so `make build` produces a reproducible erc20.bin/erc20.abi.
+
+[profile.default]
+src = "src"
+out = "out"
+solc = "0.8.30"
+remappings = ["@openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.6.1/"]
+libs = ["dependencies"]
+
+[dependencies]
+"@openzeppelin-contracts" = "5.6.1"
+
+# We declare the canonical `@openzeppelin/contracts/` remapping above, so don't
+# let Soldeer write its own remappings.txt with a versioned prefix.
+[soldeer]
+remappings_generate = false
+
+[rpc_endpoints]
+fabricx = "http://localhost:8545"

@@ -1,0 +1,88 @@
+# Configuration for running fxevm inside Docker Compose (compose.yml).
+# Paths are absolute as mounted in the container; host is the Docker service alias.
+# Using in-memory databases because the test-committer doesn't keep state either.
+
+network:
+  protocol: fabric-x
+  channel: mychannel
+  namespace: basic
+  ns-version: "1.0"
+  chain-id: 4011
+
+gateway:
+  listen: "0.0.0.0:8545"
+
+  identity:
+    msp-id: Org1MSP
+    msp-dir: /user-msp
+
+  database:
+    connection-string: "file:/data/gateway.db"
+
+  orderers:
+    - endpoint:
+        host: orderer-party1-router
+        port: 7050
+      tls:
+        mode: mtls
+        cert-path: /user-tls/client.crt
+        key-path: /user-tls/client.key
+        ca-cert-paths:
+          - /crypto/orderer1-tls-ca.pem
+    - endpoint:
+        host: orderer-party2-router
+        port: 7150
+      tls:
+        mode: mtls
+        cert-path: /user-tls/client.crt
+        key-path: /user-tls/client.key
+        ca-cert-paths:
+          - /crypto/orderer2-tls-ca.pem
+    - endpoint:
+        host: orderer-party3-router
+        port: 7250
+      tls:
+        mode: mtls
+        cert-path: /user-tls/client.crt
+        key-path: /user-tls/client.key
+        ca-cert-paths:
+          - /crypto/orderer3-tls-ca.pem
+    - endpoint:
+        host: orderer-party4-router
+        port: 7350
+      tls:
+        mode: mtls
+        cert-path: /user-tls/client.crt
+        key-path: /user-tls/client.key
+        ca-cert-paths:
+          - /crypto/orderer4-tls-ca.pem
+
+  committer:
+    endpoint:
+      host: committer-sidecar
+      port: 4001
+    tls:
+      mode: mtls
+      cert-path: /user-tls/client.crt
+      key-path: /user-tls/client.key
+      ca-cert-paths:
+        - /user-tls/ca.crt
+
+endorsers:
+  - name: org1
+    identity:
+      msp-id: Org1MSP
+      msp-dir: /endorser-msp
+    committer:
+      endpoint:
+        host: committer-sidecar
+        port: 4001
+      tls:
+        mode: mtls
+        cert-path: /user-tls/client.crt
+        key-path: /user-tls/client.key
+        ca-cert-paths:
+          - /user-tls/ca.crt
+    database:
+      database: sqlite
+      connection-string: "file:/data/endorser-org1.db"

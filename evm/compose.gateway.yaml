@@ -1,0 +1,40 @@
+name: fabric-x-evm
+
+# EVM JSON-RPC gateway.
+#
+# Requires the Fabric-X network (devnet) to be running first:
+#   make start-node   start network + gateway (port 8545)
+#   make start        start network + gateway + block explorer
+
+services:
+  gateway:
+    image: ghcr.io/hyperledger/fabric-x-evm:0.1.0
+    restart: unless-stopped
+    container_name: gateway
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["start", "--config", "/config/gateway-conf.yaml"]
+    networks:
+      - default
+      - fabric-x
+    ports:
+      - "127.0.0.1:8545:8545"
+    volumes:
+      - ../devnet/crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp:/user-msp:ro,Z
+      - ../devnet/crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/tls:/user-tls:ro,Z
+      - ../devnet/crypto/peerOrganizations/org1.example.com/peers/endorser.org1.example.com/msp:/endorser-msp:ro,Z
+      - ../devnet/crypto/ordererOrganizations/orderer-org-1/msp/tlscacerts/tlsca.orderer-org-1-cert.pem:/crypto/orderer1-tls-ca.pem:ro,Z
+      - ../devnet/crypto/ordererOrganizations/orderer-org-2/msp/tlscacerts/tlsca.orderer-org-2-cert.pem:/crypto/orderer2-tls-ca.pem:ro,Z
+      - ../devnet/crypto/ordererOrganizations/orderer-org-3/msp/tlscacerts/tlsca.orderer-org-3-cert.pem:/crypto/orderer3-tls-ca.pem:ro,Z
+      - ../devnet/crypto/ordererOrganizations/orderer-org-4/msp/tlscacerts/tlsca.orderer-org-4-cert.pem:/crypto/orderer4-tls-ca.pem:ro,Z
+      - ./gateway-conf.yaml:/config/gateway-conf.yaml:ro,Z
+      - ./data/gateway:/data:Z
+    healthcheck:
+      test: ["CMD", "fxevm", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+networks:
+  fabric-x:
+    external: true

@@ -32,14 +32,23 @@ A complete token management application demonstrating:
 - Docker Compose and Ansible deployment configurations
 - Support for both Fabric 3.x and Fabric-X environments
 
-### [SDK Endorser](custom-endorser/)
+### [Endorser](custom-endorser/)
 
 A minimal example of a custom endorser service built with the Fabric-X SDK. Unlike classic
 chaincode, an endorser runs as a standalone gRPC service outside the peer. The sample shows how to
 implement the single `Executor` interface, wire it into the endorser server, and submit transactions
 through an included client CLI against a local test network.
 
+### [EVM](evm/)
+
+Run standard Solidity smart contracts on Fabric-X. Stands up the
+[fabric-x-evm](https://github.com/hyperledger/fabric-x-evm) JSON-RPC gateway plus a
+Blockscout block explorer on top of the devnet, and demonstrates:
+
+- A standard Ethereum JSON-RPC endpoint compatible with existing tooling (Foundry, Hardhat, MetaMask)
+- Deploying and transferring an OpenZeppelin ERC-20 token
+- A one-command Docker Compose stack with a graphical block explorer
+
 ## Coming soon
 
-- [ ] [EVM Integration](https://github.com/hyperledger/fabric-x-evm) example
 - [ ] Base CRUD application with FSC [#1](https://github.com/hyperledger/fabric-x-samples/issues/1)
