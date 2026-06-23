@@ -14,6 +14,7 @@ services:
   # ─── Orderer Party 1 ───────────────────────────────────────────────────────
 
   orderer-party1-router:
+    container_name: orderer-party1-router
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -35,10 +36,15 @@ services:
       timeout: 3s
       retries: 20
       start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party1-assembler:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party1-batcher:
+    container_name: orderer-party1-batcher
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -51,10 +57,27 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-1/msp/tlscacerts/tlsca.orderer-org-1-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party1-batcher:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party1-consenter:
+        condition: service_healthy
+      orderer-party2-consenter:
+        condition: service_healthy
+      orderer-party3-consenter:
+        condition: service_healthy
+      orderer-party4-consenter:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party1-consenter:
+    container_name: orderer-party1-consenter
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -67,10 +90,18 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-1/msp/tlscacerts/tlsca.orderer-org-1-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party1-consenter:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   orderer-party1-assembler:
+    container_name: orderer-party1-assembler
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -86,12 +117,23 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party1-assembler:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party1-batcher:
+        condition: service_healthy
     networks:
       - fabric-x
 
   # ─── Orderer Party 2 ───────────────────────────────────────────────────────
 
   orderer-party2-router:
+    container_name: orderer-party2-router
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -107,10 +149,21 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party2-router:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party2-assembler:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party2-batcher:
+    container_name: orderer-party2-batcher
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -123,10 +176,27 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-2/msp/tlscacerts/tlsca.orderer-org-2-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party2-batcher:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party1-consenter:
+        condition: service_healthy
+      orderer-party2-consenter:
+        condition: service_healthy
+      orderer-party3-consenter:
+        condition: service_healthy
+      orderer-party4-consenter:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party2-consenter:
+    container_name: orderer-party2-consenter
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -139,10 +209,18 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-2/msp/tlscacerts/tlsca.orderer-org-2-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party2-consenter:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   orderer-party2-assembler:
+    container_name: orderer-party2-assembler
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -158,12 +236,23 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party2-assembler:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party2-batcher:
+        condition: service_healthy
     networks:
       - fabric-x
 
   # ─── Orderer Party 3 ───────────────────────────────────────────────────────
 
   orderer-party3-router:
+    container_name: orderer-party3-router
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -179,10 +268,21 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party3-router:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party3-assembler:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party3-batcher:
+    container_name: orderer-party3-batcher
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -195,10 +295,27 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-3/msp/tlscacerts/tlsca.orderer-org-3-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party3-batcher:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party1-consenter:
+        condition: service_healthy
+      orderer-party2-consenter:
+        condition: service_healthy
+      orderer-party3-consenter:
+        condition: service_healthy
+      orderer-party4-consenter:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party3-consenter:
+    container_name: orderer-party3-consenter
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -211,10 +328,18 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-3/msp/tlscacerts/tlsca.orderer-org-3-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party3-consenter:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   orderer-party3-assembler:
+    container_name: orderer-party3-assembler
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -230,12 +355,23 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party3-assembler:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party3-batcher:
+        condition: service_healthy
     networks:
       - fabric-x
 
   # ─── Orderer Party 4 ───────────────────────────────────────────────────────
 
   orderer-party4-router:
+    container_name: orderer-party4-router
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -251,10 +387,21 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party4-router:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party4-assembler:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party4-batcher:
+    container_name: orderer-party4-batcher
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -267,10 +414,27 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-4/msp/tlscacerts/tlsca.orderer-org-4-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party4-batcher:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party1-consenter:
+        condition: service_healthy
+      orderer-party2-consenter:
+        condition: service_healthy
+      orderer-party3-consenter:
+        condition: service_healthy
+      orderer-party4-consenter:
+        condition: service_healthy
     networks:
       - fabric-x
 
   orderer-party4-consenter:
+    container_name: orderer-party4-consenter
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -283,10 +447,18 @@ services:
       - ./crypto/ordererOrganizations/orderer-org-4/msp/tlscacerts/tlsca.orderer-org-4-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party4-consenter:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   orderer-party4-assembler:
+    container_name: orderer-party4-assembler
     image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
     pull_policy: missing
     restart: unless-stopped
@@ -302,6 +474,16 @@ services:
       - ./crypto/client-tls-ca.pem:/client-tls-ca.pem:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/orderers/party4-assembler:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9443/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      orderer-party4-batcher:
+        condition: service_healthy
     networks:
       - fabric-x
 
@@ -322,11 +504,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 5s
+      start_interval: 1s
     networks:
       - fabric-x
 
   committer-verifier:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.3
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -339,7 +523,7 @@ services:
       - fabric-x
 
   committer-validator:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.3
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -357,7 +541,7 @@ services:
       - fabric-x
 
   committer-coordinator:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.3
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -376,7 +560,7 @@ services:
       - fabric-x
 
   committer-sidecar:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.3
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -396,11 +580,17 @@ services:
         condition: service_started
       orderer-party1-router:
         condition: service_healthy
+      orderer-party2-router:
+        condition: service_healthy
+      orderer-party3-router:
+        condition: service_healthy
+      orderer-party4-router:
+        condition: service_healthy
     networks:
       - fabric-x
 
   committer-query-service:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.3
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -422,5 +612,6 @@ services:
       timeout: 3s
       retries: 30
       start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
