@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/fabric-protos-go-apiv2/peer"
-	"github.com/hyperledger/fabric-x-committer/utils/connection"
+	"github.com/hyperledger/fabric-x-committer/utils/serve"
 	sdk "github.com/hyperledger/fabric-x-sdk"
 	"github.com/hyperledger/fabric-x-sdk/blocks"
 	"github.com/hyperledger/fabric-x-sdk/endorsement"
@@ -23,7 +23,6 @@ import (
 	nfab "github.com/hyperledger/fabric-x-sdk/network/fabric"
 	nfabx "github.com/hyperledger/fabric-x-sdk/network/fabricx"
 	"github.com/hyperledger/fabric-x-sdk/state"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
@@ -114,7 +113,7 @@ func NewWithSigner(cfg ServiceConfig, signer sdk.Signer, executors map[string]Ex
 	}
 
 	s := &Service{
-		healthcheck:       connection.DefaultHealthCheckService(),
+		healthcheck:       serve.DefaultHealthCheckService(),
 		channel:           cfg.ChannelID,
 		synchronizer:      sync,
 		executors:         executors,
@@ -134,16 +133,16 @@ func (s *Service) BlockNumber(ctx context.Context) (uint64, error) {
 	return s.readDB.BlockNumber(ctx)
 }
 
-// RegisterService implements connection.Service interface
+// RegisterService implements serve.Service interface
 // This registers the gRPC service handlers with the gRPC server
-func (s *Service) RegisterService(server *grpc.Server) {
-	peer.RegisterEndorserServer(server, s)
-	healthgrpc.RegisterHealthServer(server, s.healthcheck)
-	reflection.Register(server)
+func (s *Service) RegisterService(servers serve.Servers) {
+	peer.RegisterEndorserServer(servers.GRPC, s)
+	healthgrpc.RegisterHealthServer(servers.GRPC, s.healthcheck)
+	reflection.Register(servers.GRPC)
 	s.logger.Infof("service handlers registered")
 }
 
-// Run implements connection.Service interface
+// Run implements serve.Service interface
 // This runs background tasks concurrently with the gRPC server.
 // In this case, the synchronizer which makes sure our world state
 // database is up to date with the committing peer we connect to.

@@ -13,7 +13,7 @@ import (
 	"strconv"
 
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
-	"github.com/hyperledger/fabric-x-committer/utils/connection"
+	"github.com/hyperledger/fabric-x-committer/utils/serve"
 	"github.com/hyperledger/fabric-x-sdk/network"
 )
 
@@ -23,7 +23,7 @@ type Config struct {
 	ChannelID string `mapstructure:"channel-id"`
 
 	// Server is the main gRPC server configuration with TLS, rate limiting, etc.
-	Server *connection.ServerConfig `mapstructure:"server"`
+	Server *serve.ServerConfig `mapstructure:"server"`
 
 	// Committer is a client connection to a committing peer (sidecar in case of fabric-x).
 	Committer ClientConfig `mapstructure:"committer,omitempty"`
@@ -129,6 +129,9 @@ func (cfg Config) Validate() error {
 	}
 	if cfg.Committer.Endpoint == nil {
 		errs = append(errs, errors.New("committer.endpoint is required"))
+	}
+	if cfg.Server == nil {
+		errs = append(errs, errors.New("server configuration is required"))
 	}
 
 	return errors.Join(errs...)

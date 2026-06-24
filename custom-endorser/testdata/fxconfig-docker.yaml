@@ -1,38 +1,44 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Used by the fxconfig-init container to create the namespace. It shares the
+# committer's network namespace, so all services are reachable on localhost.
 logging:
   level: info
 
 msp:
-  localMspID: Org1MSP
-  configPath: /testdata/crypto/peerOrganizations/Org1/users/channel_admin@org1.example.com/msp
+  localMspID: peer-org-0
+  configPath: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/msp
 
 orderer:
-  address: committer:7050
+  address: localhost:7050
   channel: mychannel
   tls:
     enabled: true
-    # The test node bundles orderer and committer behind a shared TLS certificate,
-    # so the committer cert is intentionally reused here.
-    clientCert: /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/server.crt
-    clientKey: /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/server.key
+    clientCert: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.crt
+    clientKey: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.key
     rootCerts:
-      - /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt
+      # The orderer's server cert is signed by the orderer org's TLS CA.
+      - /testdata/crypto/ordererOrganizations/orderer-org-0.com/msp/tlscacerts/tlsorderer-org-0-CA-cert.pem
 
 queries:
-  address: committer:7001
+  address: localhost:7001
   tls:
     enabled: true
-    clientCert: /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/server.crt
-    clientKey: /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/server.key
+    clientCert: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.crt
+    clientKey: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.key
     rootCerts:
-      - /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt
+      - /testdata/crypto/peerOrganizations/peer-org-0.com/msp/tlscacerts/tlspeer-org-0-CA-cert.pem
 
 notifications:
-  address: committer:4001
+  address: localhost:4001
   tls:
     enabled: true
-    clientCert: /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/server.crt
-    clientKey: /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/server.key
+    clientCert: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.crt
+    clientKey: /testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.key
     rootCerts:
-      - /testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt
+      - /testdata/crypto/peerOrganizations/peer-org-0.com/msp/tlscacerts/tlspeer-org-0-CA-cert.pem
   connectionTimeout: 10s
-  waitingTimeout: 10s
+  waitingTimeout: 30s
