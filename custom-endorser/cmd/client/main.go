@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
 	"github.com/hyperledger/fabric-x-common/common/viperutil"
@@ -154,15 +153,12 @@ need to confirm that the transaction has been committed.`,
 			defer ec.Close() //nolint:errcheck
 
 			ordererConfs := []network.OrdererConf{cfg.Orderer.ToOrdererConf()}
-			// Broadcast is asynchronous, so wait after submitting to let the
-			// envelope reach the orderer (and the tx commit) before we close.
-			const submitWait = 2 * time.Second
 			var submitter *network.FabricSubmitter
 			switch cfg.Protocol {
 			case "fabric":
-				submitter, err = nfab.NewSubmitter(cmd.Context(), ordererConfs, signer, submitWait, logger)
+				submitter, err = nfab.NewSubmitter(cmd.Context(), ordererConfs, signer, 0, logger)
 			case "fabric-x", "":
-				submitter, err = nfabx.NewSubmitter(cmd.Context(), ordererConfs, signer, submitWait, logger)
+				submitter, err = nfabx.NewSubmitter(cmd.Context(), ordererConfs, signer, 0, logger)
 			default:
 				return fmt.Errorf("unknown protocol %q: must be \"fabric\" or \"fabric-x\"", cfg.Protocol)
 			}
