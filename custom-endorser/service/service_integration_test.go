@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -173,8 +174,13 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 		Committer: cfg.Committer.ToPeerConf(),
 	}
 
+	// Wait for the Run goroutines so they can't log after the test completes.
 	syncCtx, syncCancel := context.WithCancel(t.Context())
-	t.Cleanup(syncCancel)
+	var syncWG sync.WaitGroup
+	t.Cleanup(func() {
+		syncCancel()
+		syncWG.Wait()
+	})
 
 	// Start one endorser service per signer, collecting their gRPC addresses.
 	var svcs []*service.Service
@@ -190,7 +196,7 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 		}
 		svcs = append(svcs, svc)
 
-		go svc.Run(syncCtx) //nolint:errcheck
+		syncWG.Go(func() { _ = svc.Run(syncCtx) })
 
 		lis, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
@@ -444,10 +450,15 @@ func TestWaitForReadyWaitsForSync(t *testing.T) {
 		t.Fatalf("NewWithSigner: %v", err)
 	}
 
-	// Start synchronization in background
+	// Start synchronization in background, waiting for it to stop on cleanup
+	// so it can't log after the test completes.
 	syncCtx, syncCancel := context.WithCancel(t.Context())
-	defer syncCancel()
-	go svc.Run(syncCtx) //nolint:errcheck
+	var syncWG sync.WaitGroup
+	syncWG.Go(func() { _ = svc.Run(syncCtx) })
+	t.Cleanup(func() {
+		syncCancel()
+		syncWG.Wait()
+	})
 
 	// Service should become ready after sync completes
 	if !svc.WaitForReady(t.Context()) {
