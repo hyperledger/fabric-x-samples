@@ -38,7 +38,7 @@ resource-limits:
   max-workers-for-validator: 1
   max-workers-for-committer: 20
   min-transaction-batch-size: 1
-  timeout-for-min-transaction-batch-size: 2s
+  timeout-for-min-transaction-batch-size: 1ms
 
 logging:
-  logSpec: "info"
+  logSpec: info:grpc=error

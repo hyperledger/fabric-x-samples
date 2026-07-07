@@ -40,5 +40,8 @@ dependency-graph:
 
 per-channel-buffer-size-per-goroutine: 10
 
+min-batch-keys: 1
+max-batch-wait: 1ms
+
 logging:
-  logSpec: "info"
+  logSpec: info:grpc=error

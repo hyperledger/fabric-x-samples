@@ -127,7 +127,7 @@ Consensus:
 
 Batching:
   BatchTimeouts:
-    BatchCreationTimeout: 500ms
+    BatchCreationTimeout: 20ms # optimize for low latency
     FirstStrikeThreshold: 10s
     SecondStrikeThreshold: 10s
     AutoRemoveTimeout: 10s

@@ -100,6 +100,7 @@ Organizations:
         Rule: OR('Org1MSP.admin')
     AnchorPeers:
 
+
   - &Org2MSP
     Name: Org2
     ID: Org2MSP

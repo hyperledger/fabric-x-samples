@@ -41,4 +41,4 @@ max-active-views: 4096
 max-request-keys: 10000
 
 logging:
-  logSpec: "info"
+  logSpec: info:grpc=error

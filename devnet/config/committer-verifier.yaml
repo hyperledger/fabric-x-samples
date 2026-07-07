@@ -14,11 +14,10 @@ monitoring:
   tls:
     mode: none
 
-parallel-executor:
-  batch-size-cutoff: 50
-  batch-time-cutoff: 10ms
-  channel-buffer-size: 50
-  parallelism: 40
+batch-size-cutoff: 50
+batch-time-cutoff: 1ms
+channel-buffer-size: 50
+parallelism: 40
 
 logging:
-  logSpec: "info"
+  logSpec: info:grpc=error
