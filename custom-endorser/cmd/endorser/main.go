@@ -14,7 +14,7 @@ import (
 	"syscall"
 
 	"github.com/hyperledger/fabric-lib-go/common/flogging"
-	"github.com/hyperledger/fabric-x-committer/utils/connection"
+	"github.com/hyperledger/fabric-x-committer/utils/serve"
 	"github.com/hyperledger/fabric-x-common/common/viperutil"
 	"github.com/hyperledger/fabric-x-samples/custom-endorser/config"
 	"github.com/hyperledger/fabric-x-samples/custom-endorser/service"
@@ -100,7 +100,7 @@ func run(cmd *cobra.Command, args []string) error {
 	// - Service registration
 	// - Background task execution
 	// - Graceful shutdown on context cancellation
-	if err := connection.StartService(cmd.Context(), svc, cfg.Server); err != nil {
+	if err := serve.StartAndServe(cmd.Context(), svc, &serve.Config{GRPC: *cfg.Server}); err != nil {
 		return fmt.Errorf("service failed: %w", err)
 	}
 

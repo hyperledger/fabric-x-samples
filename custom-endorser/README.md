@@ -23,12 +23,16 @@ logic.
 make build   # compiles bin/endorser and bin/client
 ```
 
-### 2. Generate crypto material and start the test network
+### 2. Extract crypto material and start the test network
 
 ```shell
-make init-network    # generate TLS certs and MSP material (only once)
-make start-network # start committer + orderer in Docker
+make init-network    # extract the committer's crypto material (only once)
+make start-network # start committer + orderer in Docker and create the namespace
 ```
+
+The test committer ships its own crypto material, genesis block and service configs.
+`init-network` extracts that material into `testdata/crypto` so the endorser, client and
+`fxconfig` all use the identities the committer already trusts.
 
 ### 3. Start the endorsers
 
@@ -36,22 +40,23 @@ Run each in a **separate terminal** — logs stream to stdout so you can see wha
 
 **Terminal 1**
 ```shell
-./bin/endorser -c sampleconfig/endorser-org1.yaml
+./bin/endorser -c sampleconfig/endorser1.yaml
 ```
 
 **Terminal 2**
 ```shell
-./bin/endorser -c sampleconfig/endorser-org2.yaml
+./bin/endorser -c sampleconfig/endorser2.yaml
 ```
 
 Each endorser logs `starting endorser` and then listens for proposals (endorser1 on `:9001`,
 endorser2 on `:9002`).
 
 > [!NOTE]  
-> Our "network" consists of two organizations, as defined in [testdata/crypto-config.yaml](./testdata/crypto-config.yaml).
-> The fact that we need two endorsers is defined by the endorsement policy in
-> fxconfig-init container: `--policy=AND('Org1MSP.member', 'Org2MSP.member')`. It means both
-> organizations have to sign the read/write set for it to be accepted on the ledger.
+> Our "network" consists of two organizations (`peer-org-0` and `peer-org-1`), whose crypto
+> material is embedded in the test committer image. The fact that we need two endorsers is defined
+> by the endorsement policy used when creating the namespace:
+> `--policy=AND('peer-org-0.member', 'peer-org-1.member')`. It means both organizations have to
+> sign the read/write set for it to be accepted on the ledger.
 
 ### 4. Send a transaction
 
@@ -115,7 +120,7 @@ modify the resulting read/write set directly before returning `endorsement.Succe
 ├── config/              # Configuration structures
 ├── sampleconfig/        # Sample config files (endorser1/2, client)
 ├── service/             # Service implementation and integration tests
-├── testdata/            # Network config, crypto-config, and generated crypto material
+├── testdata/            # Network config + crypto material extracted from the committer image
 ├── compose.yml          # Docker Compose for committer + orderer
 ├── Makefile
 ├── go.mod
@@ -142,7 +147,7 @@ and crypto material used by the test environment.
 Any config field can be overridden with the `ENDORSER_` prefix:
 
 ```shell
-ENDORSER_SERVER_ENDPOINT_PORT=8080 ./bin/endorser -c sampleconfig/endorser-org1.yaml
+ENDORSER_SERVER_ENDPOINT_PORT=8080 ./bin/endorser -c sampleconfig/endorser1.yaml
 ```
 
 ## Core Dependencies

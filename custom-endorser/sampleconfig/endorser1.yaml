@@ -22,18 +22,19 @@ server:
 
   # TLS configuration
   # Supported modes: "none", "tls" (one-sided), "mtls" (mutual TLS)
+  # The loadgen identity is reused as the server cert because it has a "localhost" SAN.
   tls:
     mode: mtls
-    cert-path: testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/tls/server.crt
-    key-path: testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/tls/server.key
+    cert-path: testdata/crypto/peerOrganizations/peer-org-0.com/peers/loadgen/tls/server.crt
+    key-path: testdata/crypto/peerOrganizations/peer-org-0.com/peers/loadgen/tls/server.key
     ca-cert-paths:
-      - testdata/crypto/peerOrganizations/Org1/tlsca/tlsca.org1.example.com-cert.pem
-      - testdata/crypto/peerOrganizations/Org2/tlsca/tlsca.org2.example.com-cert.pem
+      - testdata/crypto/peerOrganizations/peer-org-0.com/tlsca/tlspeer-org-0-CA-cert.pem
+      - testdata/crypto/peerOrganizations/peer-org-1.com/tlsca/tlspeer-org-1-CA-cert.pem
 
 # Fabric MSP identity to connect to committer and to endorse
 identity:
-  msp-id: Org1MSP
-  msp-dir: testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/msp
+  msp-id: peer-org-0
+  msp-dir: testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/msp
 
 # The committer is the peer (Fabric) or sidecar endpoint (Fabric-X) that the endorser connects to to sync world state.
 committer:
@@ -42,10 +43,10 @@ committer:
     port: 4001
   tls:
     mode: mtls
-    cert-path: testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/tls/server.crt
-    key-path: testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/tls/server.key
+    cert-path: testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.crt
+    key-path: testdata/crypto/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.key
     ca-cert-paths:
-      - testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt
+      - testdata/crypto/peerOrganizations/peer-org-0.com/tlsca/tlspeer-org-0-CA-cert.pem
 
 # Logging configuration
 logging:

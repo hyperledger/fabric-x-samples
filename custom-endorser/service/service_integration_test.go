@@ -14,9 +14,11 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/hyperledger/fabric-x-committer/utils/serve"
 	"github.com/hyperledger/fabric-x-samples/custom-endorser/config"
 	"github.com/hyperledger/fabric-x-samples/custom-endorser/service"
 	sdk "github.com/hyperledger/fabric-x-sdk"
@@ -67,11 +69,11 @@ type endorserSetup struct {
 func newWithTestBackend(t *testing.T, networkType string) *endorserSetup {
 	t.Helper()
 
-	fnet, err := fabrictest.Start("basic", networkType, fabrictest.Config{})
+	fnet, err := fabrictest.Start(t.Context(), "basic", networkType, fabrictest.Config{}, nil)
 	if err != nil {
 		t.Fatalf("fabrictest.Start: %v", err)
 	}
-	t.Cleanup(fnet.Stop)
+	// stops when t.Context() is cancelled
 
 	cfg := config.Config{
 		ChannelID: "mychannel",
@@ -82,7 +84,8 @@ func newWithTestBackend(t *testing.T, networkType string) *endorserSetup {
 		},
 	}
 
-	return newSetup(t, cfg, []sdk.Signer{testSigner{}}, testSigner{}, fmt.Sprintf("127.0.0.1:%d", fnet.OrdererPort), "basic")
+	// The in-process fabrictest backend uses no TLS for the orderer connection.
+	return newSetup(t, cfg, []sdk.Signer{testSigner{}}, testSigner{}, fmt.Sprintf("127.0.0.1:%d", fnet.OrdererPort), network.TLSConfig{Mode: network.TLSModeNone}, "basic")
 }
 
 // newTestCommitterSetup returns a test setup pointed at a running Fabric-X committer.
@@ -91,7 +94,8 @@ func newTestCommitterSetup(t *testing.T) *endorserSetup {
 	t.Helper()
 
 	peerAddr := "127.0.0.1:4001"
-	ordererAddr := "127.0.0.1:7050"
+	// The orderer cert has a "localhost" SAN but no IP SAN, so it must be dialled by name.
+	ordererAddr := "localhost:7050"
 
 	// Check if committer is reachable
 	conn, err := net.DialTimeout("tcp", peerAddr, time.Second)
@@ -100,6 +104,9 @@ func newTestCommitterSetup(t *testing.T) *endorserSetup {
 	}
 	conn.Close()
 
+	// The committer only trusts peer-org-0's TLS CA, so endorsers and client
+	// connect to it with peer-org-0 credentials.
+	const cryptoDir = "../testdata/crypto"
 	cfg := config.Config{
 		ChannelID: "mychannel",
 		Protocol:  "fabric-x",
@@ -108,38 +115,46 @@ func newTestCommitterSetup(t *testing.T) *endorserSetup {
 			Endpoint: &config.Endpoint{Host: "127.0.0.1", Port: 4001},
 			TLS: config.TLSConfig{
 				Mode:        "mtls",
-				CACertPaths: []string{"../testdata/crypto/peerOrganizations/Org1/peers/committer.org1.example.com/tls/ca.crt"},
-				CertPath:    "../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/tls/client.crt",
-				KeyPath:     "../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/tls/client.key",
+				CACertPaths: []string{cryptoDir + "/peerOrganizations/peer-org-0.com/tlsca/tlspeer-org-0-CA-cert.pem"},
+				CertPath:    cryptoDir + "/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.crt",
+				KeyPath:     cryptoDir + "/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.key",
 			},
 		},
 	}
 
-	org1ServiceSigner, err := identity.SignerFromMSP(
-		"../testdata/crypto/peerOrganizations/Org1/peers/endorser.org1.example.com/msp",
-		"Org1MSP",
-	)
-	if err != nil {
-		t.Fatalf("SignerFromMSP (service org1): %v", err)
+	// The orderer's TLS CA differs from the peer org CA used for the committer.
+	ordererTLS := network.TLSConfig{
+		Mode:        network.TLSModeMTLS,
+		CACertPaths: []string{cryptoDir + "/ordererOrganizations/orderer-org-0.com/msp/tlscacerts/tlsorderer-org-0-CA-cert.pem"},
+		CertPath:    cryptoDir + "/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.crt",
+		KeyPath:     cryptoDir + "/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/tls/client.key",
 	}
 
-	org2ServiceSigner, err := identity.SignerFromMSP(
-		"../testdata/crypto/peerOrganizations/Org2/peers/endorser.org2.example.com/msp",
-		"Org2MSP",
+	org0ServiceSigner, err := identity.SignerFromMSP(
+		cryptoDir+"/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/msp",
+		"peer-org-0",
 	)
 	if err != nil {
-		t.Fatalf("SignerFromMSP (service org2): %v", err)
+		t.Fatalf("SignerFromMSP (service peer-org-0): %v", err)
+	}
+
+	org1ServiceSigner, err := identity.SignerFromMSP(
+		cryptoDir+"/peerOrganizations/peer-org-1.com/users/client@peer-org-1.com/msp",
+		"peer-org-1",
+	)
+	if err != nil {
+		t.Fatalf("SignerFromMSP (service peer-org-1): %v", err)
 	}
 
 	clientSigner, err := identity.SignerFromMSP(
-		"../testdata/crypto/peerOrganizations/Org1/users/User1@org1.example.com/msp",
-		"Org1MSP",
+		cryptoDir+"/peerOrganizations/peer-org-0.com/users/client@peer-org-0.com/msp",
+		"peer-org-0",
 	)
 	if err != nil {
 		t.Fatalf("SignerFromMSP (client): %v", err)
 	}
 
-	return newSetup(t, cfg, []sdk.Signer{org1ServiceSigner, org2ServiceSigner}, clientSigner, ordererAddr, "mynamespace")
+	return newSetup(t, cfg, []sdk.Signer{org0ServiceSigner, org1ServiceSigner}, clientSigner, ordererAddr, ordererTLS, "mynamespace")
 }
 
 // newSetup creates a new endorserSetup.
@@ -147,7 +162,7 @@ func newTestCommitterSetup(t *testing.T) *endorserSetup {
 // clientSigner is used by the test client (signs proposals and the transaction envelope).
 // Using distinct signers reflects the real deployment where endorser services and
 // the submitting client are different parties with different MSP identities.
-func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clientSigner sdk.Signer, ordererAddr, namespace string) *endorserSetup {
+func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clientSigner sdk.Signer, ordererAddr string, ordererTLS network.TLSConfig, namespace string) *endorserSetup {
 	t.Helper()
 
 	executors := map[string]service.Executor{
@@ -159,8 +174,13 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 		Committer: cfg.Committer.ToPeerConf(),
 	}
 
+	// Wait for the Run goroutines so they can't log after the test completes.
 	syncCtx, syncCancel := context.WithCancel(t.Context())
-	t.Cleanup(syncCancel)
+	var syncWG sync.WaitGroup
+	t.Cleanup(func() {
+		syncCancel()
+		syncWG.Wait()
+	})
 
 	// Start one endorser service per signer, collecting their gRPC addresses.
 	var svcs []*service.Service
@@ -176,14 +196,14 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 		}
 		svcs = append(svcs, svc)
 
-		go svc.Run(syncCtx) //nolint:errcheck
+		syncWG.Go(func() { _ = svc.Run(syncCtx) })
 
 		lis, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("listen: %v", err)
 		}
 		grpcSrv := grpc.NewServer()
-		svc.RegisterService(grpcSrv)
+		svc.RegisterService(serve.Servers{GRPC: grpcSrv})
 		go grpcSrv.Serve(lis) //nolint:errcheck
 		t.Cleanup(grpcSrv.Stop)
 
@@ -200,19 +220,19 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 	}
 	t.Cleanup(func() { ec.Close() }) //nolint:errcheck
 
-	// Create submitter using the same TLS config as the committer connection.
+	// Create submitter using the orderer's own TLS config.
 	log := sdk.NewTestLogger(t, "endorser-test")
 	orderers := []network.OrdererConf{{
 		Address: ordererAddr,
-		TLS:     cfg.Committer.ToPeerConf().TLS,
+		TLS:     ordererTLS,
 	}}
 
 	var submitter *network.FabricSubmitter
 	switch cfg.Protocol {
 	case "fabric":
-		submitter, err = nfab.NewSubmitter(orderers, clientSigner, 0, log)
+		submitter, err = nfab.NewSubmitter(t.Context(), orderers, clientSigner, 0, log)
 	case "fabric-x":
-		submitter, err = nfabx.NewSubmitter(orderers, clientSigner, 0, log)
+		submitter, err = nfabx.NewSubmitter(t.Context(), orderers, clientSigner, 0, log)
 	}
 	if err != nil {
 		t.Fatalf("NewSubmitter: %v", err)
@@ -411,11 +431,11 @@ func testEndorserSetThenOverwrite(t *testing.T, s *endorserSetup) {
 // after the synchronizer has completed its initial sync with the peer.
 // This follows canonical Kubernetes readiness semantics.
 func TestWaitForReadyWaitsForSync(t *testing.T) {
-	fnet, err := fabrictest.Start("basic", "fabric-x", fabrictest.Config{})
+	fnet, err := fabrictest.Start(t.Context(), "basic", "fabric-x", fabrictest.Config{}, nil)
 	if err != nil {
 		t.Fatalf("fabrictest.Start: %v", err)
 	}
-	t.Cleanup(fnet.Stop)
+	// stops when t.Context() is cancelled
 
 	svcCfg := service.ServiceConfig{
 		ChannelID: "mychannel",
@@ -430,10 +450,15 @@ func TestWaitForReadyWaitsForSync(t *testing.T) {
 		t.Fatalf("NewWithSigner: %v", err)
 	}
 
-	// Start synchronization in background
+	// Start synchronization in background, waiting for it to stop on cleanup
+	// so it can't log after the test completes.
 	syncCtx, syncCancel := context.WithCancel(t.Context())
-	defer syncCancel()
-	go svc.Run(syncCtx) //nolint:errcheck
+	var syncWG sync.WaitGroup
+	syncWG.Go(func() { _ = svc.Run(syncCtx) })
+	t.Cleanup(func() {
+		syncCancel()
+		syncWG.Wait()
+	})
 
 	// Service should become ready after sync completes
 	if !svc.WaitForReady(t.Context()) {
