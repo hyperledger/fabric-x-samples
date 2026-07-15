@@ -47,7 +47,9 @@ stop-fabric:
 # Teardown fabric-x
 .PHONY: teardown-fabric
 teardown-fabric: stop-fabric
-	@$(CONTAINER_CLI) network inspect fabric_test >/dev/null 2>&1 && $(CONTAINER_CLI) network rm fabric_test
+	@if $(CONTAINER_CLI) network inspect fabric_test >/dev/null 2>&1; then \
+		$(CONTAINER_CLI) network rm fabric_test; \
+	fi
 
 
 # Restart fabric. This deletes the ledger; the app must be cleaned as well.
