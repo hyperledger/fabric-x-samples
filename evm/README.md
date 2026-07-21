@@ -34,6 +34,16 @@ curl -s http://localhost:8545 \
 
 The block explorer is at **http://localhost:8000** (may take a minute to fully load).
 
+To also browse raw Fabric blocks and transactions (not EVM-translated), start the
+[fabric-x block explorer](https://github.com/LF-Decentralized-Trust-labs/fabric-x-block-explorer)
+alongside any running stack:
+
+```shell
+make start-explorer   # Fabric block explorer at http://localhost:3000
+```
+
+`make stop` and `make purge` also stop this explorer.
+
 ### Deploy a token
 
 Deploy an ERC-20 token by choosing a name and symbol. The contract
@@ -110,6 +120,13 @@ token to your wallet:
 
 Switch to MetaMask and confirm the tokens arrived. Try sending some back —
 there's no gas cost, so experimenting is free.
+
+### Inspect the Fabric ledger (optional)
+
+If you started the Fabric block explorer (`make start-explorer`), open
+**http://localhost:3000** to see the raw Fabric blocks that back every EVM
+transaction you just submitted — the EVM contract deployments, token transfers,
+and verifications all appear as Fabric transactions in the underlying ledger.
 
 ### Stop and reset
 

@@ -1,0 +1,65 @@
+# Copyright IBM Corp. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# A block explorer for Fabric-X (see:
+# https://github.com/LF-Decentralized-Trust-labs/fabric-x-block-explorer).
+#
+# Open the UI at http://localhost:3000.
+networks:
+  fabric-x:
+    external: true
+
+services:
+  explorer-db:
+    container_name: fabric-explorer-db
+    image: docker.io/library/postgres:18.3-alpine3.23
+    pull_policy: missing
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: explorer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./data/explorer/db:/var/lib/postgresql:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d explorer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+      start_interval: 1s
+
+  explorer:
+    container_name: fabric-explorer
+    image: ghcr.io/lf-decentralized-trust-labs/fabric-x-block-explorer:0.1.0
+    pull_policy: missing
+    restart: unless-stopped
+    ports:
+      - "${EXPLORER_PORT:-8080}:8080"
+      - "${UI_PORT:-3000}:3000"
+    volumes:
+      - ./crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/tls:/user-tls:ro,Z
+      - ./config/blockexplorer.yaml:/home/explorer/config.yaml:ro,Z
+    environment:
+      - EXPLORER_CONFIG_PATH=/home/explorer/config.yaml
+      - BACKEND_URL=http://localhost:8080
+      - NEXT_PUBLIC_BACKEND_DISPLAY_URL=${NEXT_PUBLIC_BACKEND_DISPLAY_URL:-http://localhost:8080}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "wget --quiet --tries=1 --spider http://localhost:8080/healthz && wget --quiet --tries=1 --spider http://localhost:3000/api/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+      start_interval: 1s
+    depends_on:
+      explorer-db:
+        condition: service_healthy
+    networks:
+      - default
+      - fabric-x

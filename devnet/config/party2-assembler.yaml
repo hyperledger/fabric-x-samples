@@ -36,9 +36,6 @@ General:
     SW:
       Hash: SHA2
       Security: 256
-      FileKeyStore:
-        KeyStore:
-  LogSpec: info
 
 FileStore:
   Location: /data
@@ -51,11 +48,11 @@ Operations:
 
 Metrics:
   Provider: prometheus
-  MetricsLogInterval: 0s
+  MetricsLogInterval: 10s
 
 Assembler:
   PrefetchBufferMemoryBytes: 1073741824
-  LedgerScanTimeout: 5s
+  RestartLedgerScanTimeout: 5s
   PrefetchEvictionTtl: 1h
   PopWaitMonitorTimeout: 1s
   ReplicationChannelSize: 100
