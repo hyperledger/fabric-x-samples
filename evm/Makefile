@@ -30,20 +30,24 @@ start-node:
 	@$(MAKE) -C ../devnet init-namespace NS=basic POLICY="OR('Org1MSP.member')"
 	@mkdir -p ./data/gateway
 	@$(COMPOSE) -f compose.gateway.yaml up -d
+	@echo "Waiting for gateway to be healthy..."
+	@until [ "$$($(DOCKER) inspect -f '{{.State.Health.Status}}' gateway 2>/dev/null)" != "starting" ]; do sleep 1; done
+	@[ "$$($(DOCKER) inspect -f '{{.State.Health.Status}}' gateway 2>/dev/null)" = "healthy" ] || (echo "Error: gateway is unhealthy — check: docker logs gateway"; exit 1)
 	@echo "EVM RPC ready at http://localhost:8545"
 
 .PHONY: start
-start: blockscout.env
-	@$(MAKE) -C ../devnet start
-	@$(MAKE) -C ../devnet init-namespace NS=basic POLICY="OR('Org1MSP.member')"
-	@mkdir -p ./data/gateway
-	@$(COMPOSE) -f compose.gateway.yaml up -d
-	@echo "Waiting for gateway to be healthy..."
-	@until [ "$$($(DOCKER) inspect -f '{{.State.Health.Status}}' gateway 2>/dev/null)" = "healthy" ]; do sleep 2; done
+start: blockscout.env start-node
 	@$(COMPOSE) -f compose.blockscout.yaml --env-file blockscout.env up -d
 	@echo "Visit the block explorer at http://localhost:8000/ (might take a minute to load)"
 
 # ─── Stop / Purge ─────────────────────────────────────────────────────────────
+
+# Start the Fabric-level block explorer (optional, complements Blockscout).
+# Shows raw Fabric blocks and transactions at http://localhost:3000.
+# Requires a running stack (make start-node or make start).
+.PHONY: start-explorer
+start-explorer:
+	@$(MAKE) -C ../devnet start-explorer
 
 .PHONY: stop
 stop:
@@ -75,7 +79,7 @@ build:
 # ─── Demo ─────────────────────────────────────────────────────────────────────
 
 ADMIN_KEY      := 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-EXPLORER  := http://localhost:8000
+EXPLORER       ?= http://localhost:8000
 NAME           ?= My Token
 SYMBOL         ?= TKN
 SUPPLY         ?= 1000000

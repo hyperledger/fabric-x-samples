@@ -18,24 +18,25 @@ For a (distributed) production deployment, please refer to [fabric-x-ansible-col
 
 ## Version compatibility
 
-| Orderer | Committer | Tools  |   PostgreSQL    |
-| :-----: | :-------: | :----: | :-------------: |
-| v1.0.0  |  v1.0.0   | v1.0.0 | 18.3-alpine3.23 |
+| Orderer | Committer | Tools  | Block Explorer |   PostgreSQL    |
+| :-----: | :-------: | :----: | :------------: | :-------------: |
+| v1.0.2  |  v1.0.3   | v1.0.0 |     v0.1.0     | 18.3-alpine3.23 |
 
 ## Quick start
 
 ### Full stack (production-like)
 
 ```sh
-make init                # generate crypto and genesis block (run once, or after clean)
-make start               # start orderers + Org1 committer
-make init-namespace      # create the namespace
+make init                 # generate crypto and genesis block (run once, or after clean)
+make start                # start orderers + Org1 committer
+make start-explorer       # optional: block explorer UI at http://localhost:3000
+make init-namespace       # create the namespace
 ```
 
 Teardown:
 
 ```sh
-make stop                # stop (volumes preserved)
+make stop                # stop everything, including the explorer if running
 make purge               # stop and delete all volumes
 ```
 
@@ -56,6 +57,21 @@ make stop-dev
 `fxconfig.yaml` is identical for both modes. The test-committer answers on the same Docker
 network aliases (`orderer-party1-router`, `committer-query-service`, `committer-sidecar`) as
 the full-stack services, so applications need no changes when switching backends.
+
+### Block explorer (optional)
+
+A web UI for browsing blocks and transactions
+([fabric-x-block-explorer](https://github.com/LF-Decentralized-Trust-labs/fabric-x-block-explorer)).
+It runs as two containers (combined UI+backend, PostgreSQL) and joins the `fabric-x` Docker network,
+so a stack must be running first:
+
+```sh
+make start               # or start-dev / start-both
+make start-explorer      # UI at http://localhost:3000
+make stop-explorer       # stop only the explorer (stack keeps running)
+```
+
+`make stop` and `make purge` also stop the explorer; `make purge` additionally deletes its database.
 
 ## Using this network in your project
 
@@ -176,21 +192,24 @@ Then all standard targets work unchanged:
 ```sh
 make init
 make start
+make start-explorer       # optional
 make init-namespace
-make stop        # or make purge
+make stop      # or make purge
 ```
 
 ## Port reference
 
-| Service                          | Host port              |
-| -------------------------------- | ---------------------- |
-| Router (broadcast), parties 1-4  | 7050, 7150, 7250, 7350 |
-| Assembler (deliver), parties 1-4 | 7053, 7153, 7253, 7353 |
-| Committer Sidecar (Org1)         | 4001                   |
-| Committer Query Service (Org1)   | 7001                   |
-| Committer Sidecar (Org2)         | 4002                   |
-| Committer Query Service (Org2)   | 7002                   |
-| Test committer (dev)             | 4001, 7001, 7050, 7053 |
+| Service                           | Host port              |
+| --------------------------------- | ---------------------- |
+| Router (broadcast), parties 1-4   | 7050, 7150, 7250, 7350 |
+| Assembler (deliver), parties 1-4  | 7053, 7153, 7253, 7353 |
+| Committer Sidecar (Org1)          | 4001                   |
+| Committer Query Service (Org1)    | 7001                   |
+| Committer Sidecar (Org2)          | 4002                   |
+| Committer Query Service (Org2)    | 7002                   |
+| Test committer (dev)              | 4001, 7001, 7050, 7053 |
+| Block explorer UI (optional)      | 3000                   |
+| Block explorer backend (optional) | 8080                   |
 
 ## Directory layout
 
@@ -202,6 +221,7 @@ make stop        # or make purge
 ├── compose.yaml                # 4-party Arma BFT orderer, plus 1 committer organization
 ├── compose.org2.yaml           # Org2 committer stack — optional, see below
 ├── compose.test-committer.yaml # all-in-one dev committer
+├── compose.block-explorer.yaml # optional block explorer (UI + backend + db)
 ├── crypto-config.yaml          # cryptogen input — all the certificates for the network
 ├── configtx.yaml               # channel topology and genesis block profile
 ├── shared_config.yaml          # Arma BFT party configuration

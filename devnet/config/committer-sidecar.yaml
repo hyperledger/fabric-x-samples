@@ -20,7 +20,7 @@ orderer:
     mode: mtls
     cert-path: /node-tls/server.crt
     key-path: /node-tls/server.key
-    common-ca-cert-paths:
+    ca-cert-paths:
       - /orderer-cas/orderer-org-1/msp/tlscacerts/tlsca.orderer-org-1-cert.pem
       - /orderer-cas/orderer-org-2/msp/tlscacerts/tlsca.orderer-org-2-cert.pem
       - /orderer-cas/orderer-org-3/msp/tlscacerts/tlsca.orderer-org-3-cert.pem
@@ -46,9 +46,10 @@ notification:
   max-timeout: 10m
   max-active-tx-ids: 100_000
   max-tx-ids-per-request: 1000
+  stream-write-timeout: 30s
 
 last-committed-block-set-interval: 5s
-waiting-txs-limit: 20_000_000
+waiting-txs-limit: 100_000
 channel-buffer-size: 100
 
 logging:

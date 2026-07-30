@@ -35,9 +35,6 @@ General:
     SW:
       Hash: SHA2
       Security: 256
-      FileKeyStore:
-        KeyStore:
-  LogSpec: info
 
 FileStore:
   Location: /data
@@ -50,7 +47,7 @@ Operations:
 
 Metrics:
   Provider: prometheus
-  MetricsLogInterval: 0s
+  MetricsLogInterval: 10s
 
 Batcher:
   ShardID: 1

@@ -15,7 +15,7 @@ services:
 
   orderer-party1-router:
     container_name: orderer-party1-router
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -45,7 +45,7 @@ services:
 
   orderer-party1-batcher:
     container_name: orderer-party1-batcher
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -78,7 +78,7 @@ services:
 
   orderer-party1-consenter:
     container_name: orderer-party1-consenter
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -102,7 +102,7 @@ services:
 
   orderer-party1-assembler:
     container_name: orderer-party1-assembler
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -134,7 +134,7 @@ services:
 
   orderer-party2-router:
     container_name: orderer-party2-router
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -164,7 +164,7 @@ services:
 
   orderer-party2-batcher:
     container_name: orderer-party2-batcher
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -197,7 +197,7 @@ services:
 
   orderer-party2-consenter:
     container_name: orderer-party2-consenter
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -221,7 +221,7 @@ services:
 
   orderer-party2-assembler:
     container_name: orderer-party2-assembler
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -253,7 +253,7 @@ services:
 
   orderer-party3-router:
     container_name: orderer-party3-router
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -283,7 +283,7 @@ services:
 
   orderer-party3-batcher:
     container_name: orderer-party3-batcher
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -316,7 +316,7 @@ services:
 
   orderer-party3-consenter:
     container_name: orderer-party3-consenter
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -340,7 +340,7 @@ services:
 
   orderer-party3-assembler:
     container_name: orderer-party3-assembler
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -372,7 +372,7 @@ services:
 
   orderer-party4-router:
     container_name: orderer-party4-router
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -402,7 +402,7 @@ services:
 
   orderer-party4-batcher:
     container_name: orderer-party4-batcher
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -435,7 +435,7 @@ services:
 
   orderer-party4-consenter:
     container_name: orderer-party4-consenter
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -459,7 +459,7 @@ services:
 
   orderer-party4-assembler:
     container_name: orderer-party4-assembler
-    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-orderer:1.0.2
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"

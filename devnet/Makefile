@@ -76,15 +76,14 @@ start:
 	@while ! nc -z localhost 7001 2>/dev/null; do sleep 1; done
 
 .PHONY: stop
-stop:
+stop: stop-explorer
 	@$(COMPOSE) -f $(FABRICX_DIR)/compose.yaml $(COMPOSE_OVERRIDE) -f $(FABRICX_DIR)/compose.org2.yaml down
 
 .PHONY: purge
-purge:
-	@$(COMPOSE) -f $(FABRICX_DIR)/compose.yaml $(COMPOSE_OVERRIDE) -f $(FABRICX_DIR)/compose.org2.yaml down
+purge: stop
 	@# Postgres (UID 70 on Alpine) creates files the host user can't delete on Linux; use a root container.
 	@$(DOCKER) run --rm -v "$(FABRICX_DIR)/data:/data" alpine rm -rf \
-		/data/committer-org1/db /data/committer-org2/db 2>/dev/null || true
+		/data/committer-org1/db /data/committer-org2/db /data/explorer/db 2>/dev/null || true
 	@rm -rf $(FABRICX_DIR)/data
 
 # ─── Both orgs (Org1 + Org2 committer stacks) ───────────────────────────────
@@ -120,12 +119,31 @@ start-dev:
 	@while ! nc -z localhost 7001 2>/dev/null; do sleep 1; done
 
 .PHONY: stop-dev
-stop-dev:
+stop-dev: stop-explorer
 	@$(COMPOSE) -f $(FABRICX_DIR)/compose.test-committer.yaml down
 
 .PHONY: purge-dev
-purge-dev:
+purge-dev: stop-explorer
 	@$(COMPOSE) -f $(FABRICX_DIR)/compose.test-committer.yaml down -v
+	@$(DOCKER) run --rm -v "$(FABRICX_DIR)/data:/data" alpine rm -rf \
+		/data/explorer/db 2>/dev/null || true
+
+# ─── Block explorer ─────────────────────────────────────────────────────────
+# Web UI for browsing blocks and transactions. Joins the external fabric-x
+# network, so start a stack first. Open the UI at http://localhost:3000.
+
+.PHONY: start-explorer
+start-explorer:
+	@if ! $(DOCKER) network inspect $(NETWORK) >/dev/null 2>&1; then echo "Error: network $(NETWORK) not found — run 'make start' first."; exit 1; fi
+	@mkdir -p $(FABRICX_DIR)/data/explorer/db
+	@$(COMPOSE) -f $(FABRICX_DIR)/compose.block-explorer.yaml up -d
+	@echo "Waiting for block explorer UI to be ready..."
+	@while ! nc -z localhost $${UI_PORT:-3000} 2>/dev/null; do sleep 1; done
+	@echo "Block explorer available at http://localhost:$${UI_PORT:-3000}"
+
+.PHONY: stop-explorer
+stop-explorer:
+	@$(COMPOSE) -f $(FABRICX_DIR)/compose.block-explorer.yaml down
 
 # ─── Namespace init ─────────────────────────────────────────────────────────
 # Run one of these after start or start-dev to create the application namespace.
@@ -172,3 +190,4 @@ init-namespace-org2:
 .PHONY: init-namespace
 init-namespace:
 	$(run-fxconfig)
+

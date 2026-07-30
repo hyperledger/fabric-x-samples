@@ -1,0 +1,40 @@
+# Configuration for the fabric-x block explorer (https://github.com/LF-Decentralized-Trust-labs/fabric-x-block-explorer)
+# The explorer container uses this via the --config flag set in compose.block-explorer.yaml.
+
+database:
+  endpoints:
+    - host: explorer-db
+      port: 5432
+  user: postgres
+  password: postgres
+  dbname: explorer
+  max_conns: 20
+
+sidecar:
+  connection:
+    endpoint:
+      host: committer-sidecar
+      port: 4001
+    tls:
+      mode: mtls
+      ca-cert-paths:
+        - /user-tls/ca.crt
+      cert-path: /user-tls/client.crt
+      key-path: /user-tls/client.key
+  start_block: 0
+
+buffer:
+  raw_channel_size: 500
+  proc_channel_size: 500
+
+workers:
+  processor_count: 4
+  writer_count: 4
+
+server:
+  rest:
+    endpoint:
+      host: 0.0.0.0
+      port: 8080
+    read_header_timeout: 10s
+    default_tx_limit: 50
