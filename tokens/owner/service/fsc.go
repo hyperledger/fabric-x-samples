@@ -63,11 +63,11 @@ func (f FabricSmartClient) Balances(ctx context.Context, wallet string) ([]Amoun
 		return nil, fmt.Errorf("failed to get token management service: %w", err)
 	}
 
-	wal := mgmt.WalletManager().OwnerWallet(ctx, wallet)
-	if wal == nil {
-		return nil, ErrWalletNotFound
+	wal, err := mgmt.WalletManager().OwnerWallet(ctx, wallet)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrWalletNotFound, err)
 	}
-	tokens, err := wal.ListUnspentTokens(token.WithContext(ctx))
+	tokens, err := wal.ListUnspentTokens(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrBalance, err)
 	}
@@ -93,15 +93,15 @@ func (f FabricSmartClient) Balance(ctx context.Context, wallet, code string) (Am
 	if err != nil {
 		return Amount{}, fmt.Errorf("failed to get token management service: %w", err)
 	}
-	wal := mgmt.WalletManager().OwnerWallet(ctx, wallet)
-	if wal == nil {
-		return Amount{}, ErrWalletNotFound
+	wal, err := mgmt.WalletManager().OwnerWallet(ctx, wallet)
+	if err != nil {
+		return Amount{}, fmt.Errorf("%w: %w", ErrWalletNotFound, err)
 	}
-	val, err := wal.Balance(ctx, token.WithContext(ctx), token.WithType(tok.Type(code)))
+	val, err := wal.Balance(ctx, token.WithType(tok.Type(code)))
 	if err != nil {
 		return Amount{}, fmt.Errorf("%w: %w", ErrBalance, err)
 	}
-	return Amount{Code: code, Value: val}, nil
+	return Amount{Code: code, Value: val.Uint64()}, nil
 }
 
 // Transfer transfers an amount of a certain token. It connects to the other node, prepares the transaction,
@@ -112,7 +112,7 @@ func (f FabricSmartClient) Transfer(ctx context.Context, tokenType string, quant
 	if err != nil {
 		return "", err
 	}
-	res, err := mgr.InitiateView(&TransferView{
+	res, err := mgr.InitiateView(ctx, &TransferView{
 		TransferOptions: &TransferOptions{
 			Wallet:        sender,
 			TokenType:     tokenType,
@@ -121,7 +121,7 @@ func (f FabricSmartClient) Transfer(ctx context.Context, tokenType string, quant
 			RecipientNode: recipientNode,
 			Message:       message,
 		},
-	}, ctx)
+	})
 	if err != nil {
 		logger.Errorf("error transferring: %s", err.Error())
 		return "", err
@@ -142,14 +142,14 @@ func (f FabricSmartClient) Redeem(ctx context.Context, tokenType string, quantit
 	if err != nil {
 		return "", err
 	}
-	res, err := mgr.InitiateView(&RedeemView{
+	res, err := mgr.InitiateView(ctx, &RedeemView{
 		RedeemOptions: &RedeemOptions{
 			Wallet:    sender,
 			TokenType: tokenType,
 			Quantity:  quantity,
 			Message:   message,
 		},
-	}, ctx)
+	})
 	if err != nil {
 		logger.Errorf("error redeeming: %s", err.Error())
 		return "", err

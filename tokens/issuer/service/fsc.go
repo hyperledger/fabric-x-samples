@@ -53,7 +53,7 @@ func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity
 	if err != nil {
 		return "", err
 	}
-	res, err := mgr.InitiateView(&IssueCashView{
+	res, err := mgr.InitiateView(ctx, &IssueCashView{
 		IssueCash: &IssueCash{
 			TokenType:     tokenType,
 			Quantity:      quantity,
@@ -61,7 +61,7 @@ func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity
 			RecipientNode: recipientNode,
 			Message:       message,
 		},
-	}, ctx)
+	})
 	if err != nil {
 		logger.Errorf("error issuing: %s", err.Error())
 		return "", err

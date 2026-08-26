@@ -31,7 +31,7 @@ type SDK struct {
 func (p *SDK) Install() error {
 	if err := errors.Join(
 		p.Container().Provide(fabric.NewGenericDriver, dig.Group("network-drivers")),
-		p.Container().Provide(dlog.NewDriver, dig.Group("token-drivers")),
+		p.Container().Provide(dlog.NewTokenDriver, dig.Group("token-drivers")),
 	); err != nil {
 		return err
 	}
