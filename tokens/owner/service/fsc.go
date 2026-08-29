@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -230,7 +230,19 @@ func (v *RedeemView) Call(vctx view.Context) (interface{}, error) {
 		tx.SetApplicationMetadata("message", []byte(v.Message))
 	}
 
-	err = tx.Redeem(senderWallet, tok.Type(v.TokenType), v.Quantity, ttx.WithFSCIssuerIdentity(idProvider.Identity("issuer")))
+	mgmt, err := token.GetManagementService(vctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get token management service")
+	}
+	issuers := mgmt.PublicParameters().Issuers()
+	if len(issuers) == 0 {
+		return "", errors.New("no issuer found in public parameters")
+	}
+
+	err = tx.Redeem(senderWallet, tok.Type(v.TokenType), v.Quantity,
+		ttx.WithFSCIssuerIdentity(idProvider.Identity("issuer")),
+		ttx.WithIssuerPublicParamsPublicKey(issuers[0]),
+	)
 	if err != nil {
 		if strings.Contains(err.Error(), "insufficient funds") {
 			return "", ErrInsufficientFunds
