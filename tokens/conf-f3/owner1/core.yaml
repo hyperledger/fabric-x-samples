@@ -61,6 +61,14 @@ fabric:
         mspType: bccsp
         mspID: Org1MSP
         path: ./keys/fabric/user
+      - id: endorser1-endorsing
+        mspType: bccsp
+        mspID: Org1MSP
+        path: ./keys/fabric/endorser1
+      - id: endorser2-endorsing
+        mspType: bccsp
+        mspID: Org2MSP
+        path: ./keys/fabric/endorser2
     tls:
       enabled: true
     peers:
