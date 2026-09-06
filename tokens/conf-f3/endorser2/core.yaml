@@ -56,7 +56,12 @@ fsc:
 fabric:
   enabled: true
   default:
+    defaultMSP: user
     msps:
+      - id: user
+        mspType: bccsp
+        mspID: Org1MSP
+        path: ./keys/fabric/user
       - id: endorser
         mspType: bccsp
         mspID: Org2MSP

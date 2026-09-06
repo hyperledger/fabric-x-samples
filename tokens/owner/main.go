@@ -37,6 +37,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Let FSC-native endorsement collection (fabric3 platform) recognize a response signed
+	// with an endorser's endorsing identity as coming from that endorser's P2P party.
+	common.BindEndorsingIdentities(fsc, "default", map[string]string{
+		"endorser1-endorsing": "endorser1",
+		"endorser2-endorsing": "endorser2",
+	})
+
 	// Register views and responders (communication with other FSC nodes)
 	reg := viewregistry.GetRegistry(fsc)
 	reg.RegisterResponder(&views.AcceptCashView{}, "github.com/hyperledger/fabric-samples/token-sdk/issuer/service/IssueCashView")
