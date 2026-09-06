@@ -56,7 +56,7 @@ gen_node_crypto() {
         mkdir -p "$dir/node"
 
         # we use the shared CA for mTLS certificates. The certificate chain is currently not verified so we could also use self-signed certificates.
-        "${FAB_BINS}/fabric-ca-client" enroll -u "http://admin:adminpw@localhost:7054" -m "${node}.example.com" --enrollment.profile tls -M "${dir}/node"
+        "${FAB_BINS}/fabric-ca-client" enroll -u "http://admin:adminpw@localhost:7054" --csr.hosts "${node}.example.com" --enrollment.profile tls -M "${dir}/node"
         cp "${dir}"/node/keystore/* "${dir}/node.key"
         cp "${dir}/node/signcerts/cert.pem" "${dir}/node.crt"
 

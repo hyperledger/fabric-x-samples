@@ -16,8 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	"github.com/LFDT-Panurus/panurus/token/token"
 )
 
 var logger = logging.MustGetLogger() // TODO
@@ -53,7 +53,7 @@ func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity
 	if err != nil {
 		return "", err
 	}
-	res, err := mgr.InitiateView(&IssueCashView{
+	res, err := mgr.InitiateView(ctx, &IssueCashView{
 		IssueCash: &IssueCash{
 			TokenType:     tokenType,
 			Quantity:      quantity,
@@ -61,7 +61,7 @@ func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity
 			RecipientNode: recipientNode,
 			Message:       message,
 		},
-	}, ctx)
+	})
 	if err != nil {
 		logger.Errorf("error issuing: %s", err.Error())
 		return "", err
@@ -136,6 +136,7 @@ func (v *IssueCashView) Call(vctx view.Context) (interface{}, error) {
 	// The issuer adds a new issue operation to the transaction to issue
 	// the amount to the recipient id recieved from the owner's node.
 	if err = tx.Issue(
+		ctx,
 		wallet,
 		recipient,
 		token.Type(v.TokenType),

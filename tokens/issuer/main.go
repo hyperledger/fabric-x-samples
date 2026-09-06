@@ -20,11 +20,9 @@ import (
 
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger/fabric-samples/token-sdk/common"
+	"github.com/hyperledger/fabric-samples/token-sdk/common/views"
 	"github.com/hyperledger/fabric-samples/token-sdk/issuer/routes"
 	"github.com/hyperledger/fabric-samples/token-sdk/issuer/service"
-
-	// TODO: don't use integration views
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 )
 
 func main() {
@@ -40,10 +38,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Let FSC-native endorsement collection (fabric3 platform) recognize a response signed
+	// with an endorser's endorsing identity as coming from that endorser's P2P party.
+	common.BindEndorsingIdentities(fsc, "default", map[string]string{
+		"endorser1-endorsing": "endorser1",
+		"endorser2-endorsing": "endorser2",
+	})
+
 	// Register views and responders (communication with other FSC nodes)
 	reg := viewregistry.GetRegistry(fsc)
 	reg.RegisterFactory("issue", &views.IssueCashViewFactory{})
-	reg.RegisterResponder(&views.IssuerRedeemAcceptView{}, &views.RedeemView{})
+	reg.RegisterResponder(&views.IssuerRedeemAcceptView{}, "github.com/hyperledger/fabric-samples/token-sdk/owner/service/RedeemView")
 
 	// Simple web server
 	sh := routes.NewStrictHandler(routes.NewServer(service.NewFSC(fsc)), []routes.StrictMiddlewareFunc{})
