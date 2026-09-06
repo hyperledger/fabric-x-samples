@@ -20,11 +20,9 @@ import (
 
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger/fabric-samples/token-sdk/common"
+	"github.com/hyperledger/fabric-samples/token-sdk/common/views"
 	"github.com/hyperledger/fabric-samples/token-sdk/owner/routes"
 	"github.com/hyperledger/fabric-samples/token-sdk/owner/service"
-
-	// TODO: don't use integration views
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 )
 
 func main() {
