@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabricx/tms"
+	"github.com/LFDT-Panurus/panurus/token/services/network/fabricx/tms"
 )
 
 var logger = logging.MustGetLogger()
