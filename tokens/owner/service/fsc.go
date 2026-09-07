@@ -17,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/storage/driver/sql/query/pagination"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -63,11 +63,11 @@ func (f FabricSmartClient) Balances(ctx context.Context, wallet string) ([]Amoun
 		return nil, fmt.Errorf("failed to get token management service: %w", err)
 	}
 
-	wal := mgmt.WalletManager().OwnerWallet(ctx, wallet)
-	if wal == nil {
-		return nil, ErrWalletNotFound
+	wal, err := mgmt.WalletManager().OwnerWallet(ctx, wallet)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrWalletNotFound, err)
 	}
-	tokens, err := wal.ListUnspentTokens(token.WithContext(ctx))
+	tokens, err := wal.ListUnspentTokens(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrBalance, err)
 	}
@@ -93,15 +93,15 @@ func (f FabricSmartClient) Balance(ctx context.Context, wallet, code string) (Am
 	if err != nil {
 		return Amount{}, fmt.Errorf("failed to get token management service: %w", err)
 	}
-	wal := mgmt.WalletManager().OwnerWallet(ctx, wallet)
-	if wal == nil {
-		return Amount{}, ErrWalletNotFound
+	wal, err := mgmt.WalletManager().OwnerWallet(ctx, wallet)
+	if err != nil {
+		return Amount{}, fmt.Errorf("%w: %w", ErrWalletNotFound, err)
 	}
-	val, err := wal.Balance(ctx, token.WithContext(ctx), token.WithType(tok.Type(code)))
+	val, err := wal.Balance(ctx, token.WithType(tok.Type(code)))
 	if err != nil {
 		return Amount{}, fmt.Errorf("%w: %w", ErrBalance, err)
 	}
-	return Amount{Code: code, Value: val}, nil
+	return Amount{Code: code, Value: val.Uint64()}, nil
 }
 
 // Transfer transfers an amount of a certain token. It connects to the other node, prepares the transaction,
@@ -112,7 +112,7 @@ func (f FabricSmartClient) Transfer(ctx context.Context, tokenType string, quant
 	if err != nil {
 		return "", err
 	}
-	res, err := mgr.InitiateView(&TransferView{
+	res, err := mgr.InitiateView(ctx, &TransferView{
 		TransferOptions: &TransferOptions{
 			Wallet:        sender,
 			TokenType:     tokenType,
@@ -121,7 +121,7 @@ func (f FabricSmartClient) Transfer(ctx context.Context, tokenType string, quant
 			RecipientNode: recipientNode,
 			Message:       message,
 		},
-	}, ctx)
+	})
 	if err != nil {
 		logger.Errorf("error transferring: %s", err.Error())
 		return "", err
@@ -142,14 +142,14 @@ func (f FabricSmartClient) Redeem(ctx context.Context, tokenType string, quantit
 	if err != nil {
 		return "", err
 	}
-	res, err := mgr.InitiateView(&RedeemView{
+	res, err := mgr.InitiateView(ctx, &RedeemView{
 		RedeemOptions: &RedeemOptions{
 			Wallet:    sender,
 			TokenType: tokenType,
 			Quantity:  quantity,
 			Message:   message,
 		},
-	}, ctx)
+	})
 	if err != nil {
 		logger.Errorf("error redeeming: %s", err.Error())
 		return "", err
@@ -230,7 +230,19 @@ func (v *RedeemView) Call(vctx view.Context) (interface{}, error) {
 		tx.SetApplicationMetadata("message", []byte(v.Message))
 	}
 
-	err = tx.Redeem(senderWallet, tok.Type(v.TokenType), v.Quantity, ttx.WithFSCIssuerIdentity(idProvider.Identity("issuer")))
+	mgmt, err := token.GetManagementService(vctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get token management service")
+	}
+	issuers := mgmt.PublicParameters().Issuers()
+	if len(issuers) == 0 {
+		return "", errors.New("no issuer found in public parameters")
+	}
+
+	err = tx.Redeem(senderWallet, tok.Type(v.TokenType), v.Quantity,
+		ttx.WithFSCIssuerIdentity(idProvider.Identity("issuer")),
+		ttx.WithIssuerPublicParamsPublicKey(issuers[0]),
+	)
 	if err != nil {
 		if strings.Contains(err.Error(), "insufficient funds") {
 			return "", ErrInsufficientFunds

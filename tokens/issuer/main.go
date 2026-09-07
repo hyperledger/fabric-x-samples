@@ -43,7 +43,7 @@ func main() {
 	// Register views and responders (communication with other FSC nodes)
 	reg := viewregistry.GetRegistry(fsc)
 	reg.RegisterFactory("issue", &views.IssueCashViewFactory{})
-	reg.RegisterResponder(&views.IssuerRedeemAcceptView{}, &views.RedeemView{})
+	reg.RegisterResponder(&views.IssuerRedeemAcceptView{}, "github.com/hyperledger/fabric-samples/token-sdk/owner/service/RedeemView")
 
 	// Simple web server
 	sh := routes.NewStrictHandler(routes.NewServer(service.NewFSC(fsc)), []routes.StrictMiddlewareFunc{})

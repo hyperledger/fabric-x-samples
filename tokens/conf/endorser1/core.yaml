@@ -67,8 +67,12 @@ fabric:
     peers:
       - address: committer-sidecar:4001
         usage:
+    notificationService:
+      endpoints:
+        - address: committer-sidecar:4001
     queryService:
-      - address: committer-queryservice:7001
+      endpoints:
+        - address: committer-query-service:7001
     channels:
       - name: arma
         default: true
