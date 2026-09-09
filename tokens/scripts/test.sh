@@ -41,7 +41,12 @@ function stop_network() {
 ## Initialize FabricX if needed
 function init_fabricx() {
     print_section_header "Initializing ${PLATFORM}..."
-    curl -f -X POST http://localhost:9300/endorser/init
+    # The endorser's readyz only reports its own HTTP server is up, not that the
+    # underlying Fabric-X network (real deployments run ~20 orderer/committer
+    # containers) has finished converging enough to accept the setup transaction
+    # this triggers -- so the first call(s) here routinely 500 right after startup.
+    # Retry with a longer window than curl_with_retry's default.
+    CURL_MAX_ATTEMPTS=30 CURL_RETRY_SLEEP_SECONDS=5 curl_with_retry POST http://localhost:9300/endorser/init
 }
 
 ## Wait for an API endpoint to report ready

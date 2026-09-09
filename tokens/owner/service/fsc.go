@@ -17,14 +17,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/sql/query/pagination"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/pagination"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	tok "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/LFDT-Panurus/panurus/token"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/ttxdb"
+	"github.com/LFDT-Panurus/panurus/token/services/ttx"
+	tok "github.com/LFDT-Panurus/panurus/token/token"
 )
 
 var (
@@ -239,7 +239,7 @@ func (v *RedeemView) Call(vctx view.Context) (interface{}, error) {
 		return "", errors.New("no issuer found in public parameters")
 	}
 
-	err = tx.Redeem(senderWallet, tok.Type(v.TokenType), v.Quantity,
+	err = tx.Redeem(vctx.Context(), senderWallet, tok.Type(v.TokenType), v.Quantity,
 		ttx.WithFSCIssuerIdentity(idProvider.Identity("issuer")),
 		ttx.WithIssuerPublicParamsPublicKey(issuers[0]),
 	)
@@ -327,6 +327,7 @@ func (v *TransferView) Call(vctx view.Context) (interface{}, error) {
 
 	// The sender adds a new transfer operation to the transaction.
 	err = tx.Transfer(
+		vctx.Context(),
 		senderWallet,
 		tok.Type(v.TokenType),
 		[]uint64{v.Quantity},
