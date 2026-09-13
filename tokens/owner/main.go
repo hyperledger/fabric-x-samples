@@ -49,6 +49,10 @@ func main() {
 	reg.RegisterResponder(&views.AcceptCashView{}, "github.com/hyperledger/fabric-samples/token-sdk/issuer/service/IssueCashView")
 	reg.RegisterResponder(&views.AcceptCashView{}, &service.TransferView{})
 	reg.RegisterFactory("redeem", &views.RedeemViewFactory{})
+	reg.RegisterResponder(&service.LockAcceptView{}, &service.LockView{})
+	reg.RegisterFactory("lock", &service.LockViewFactory{})
+	reg.RegisterFactory("claim", &service.ClaimViewFactory{})
+	reg.RegisterFactory("reclaim", &service.ReclaimViewFactory{})
 
 	// Simple web server
 	sh := routes.NewStrictHandler(routes.NewServer(service.NewFSC(fsc)), []routes.StrictMiddlewareFunc{})
