@@ -7,35 +7,17 @@ General:
     Enabled: true
     PrivateKey: /node-tls/server.key
     Certificate: /node-tls/server.crt
-    RootCAs:
-      - /org-tls-ca.pem
+    # clients are trusted via the application orgs' TLS CAs in the genesis block (more: ClientRootCAs)
     ClientAuthRequired: true
-    ClientRootCAs:
-      - /client-tls-ca.pem
-  Keepalive:
-    ServerMinInterval: 60s
-    ServerInterval: 7200s
-    ServerTimeout: 20s
-  Backoff:
-    BaseDelay: 1s
-    Multiplier: 1.6
-    MaxDelay: 2m
-  MaxRecvMsgSize: 104857600
-  MaxSendMsgSize: 104857600
   Bootstrap:
     Method: block
     File: /bootstrap/genesis.block
-  Cluster:
-    SendBufferSize: 100
-    ClientCertificate: /node-tls/server.crt
-    ClientPrivateKey: /node-tls/server.key
   LocalMSPDir: /node-msp
   LocalMSPID: OrdererOrg4MSP
-  BCCSP:
-    Default: SW
-    SW:
-      Hash: SHA2
-      Security: 256
+
+  # Validate client signatures against /Channel/Writers. Needed on the router (client-facing) and
+  # on the batcher (re-verifies batches from other parties' primaries); not on the consenter.
+  ClientSignatureVerificationRequired: true
 
 FileStore:
   Location: /data
@@ -46,10 +28,5 @@ Operations:
   TLS:
     Enabled: false
 
-Metrics:
-  Provider: prometheus
-  MetricsLogInterval: 10s
-
 Router:
-  NumberOfConnectionsPerBatcher: 10
   NumberOfStreamsPerConnection: 20

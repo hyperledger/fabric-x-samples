@@ -2,9 +2,8 @@
 FABRICX_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # Container images
-TOOLS_IMAGE          ?= ghcr.io/hyperledger/fabric-x-tools:1.0.0
-ORDERER_IMAGE        ?= ghcr.io/hyperledger/fabric-x-orderer:1.0.0
-TEST_COMMITTER_IMAGE ?= docker.io/hyperledger/fabric-x-committer-test-node:1.0.0
+TOOLS_IMAGE          ?= ghcr.io/hyperledger/fabric-x-tools:1.0.1
+ORDERER_IMAGE        ?= ghcr.io/hyperledger/fabric-x-orderer:1.0.6
 
 UID := $(shell id -u)
 GID := $(shell id -g)
@@ -26,15 +25,11 @@ NETWORK ?= fabric-x
 .PHONY: init
 init:
 	@rm -rf $(FABRICX_DIR)/crypto
-	@# Routers and assemblers accept client certs from any peer org — concatenate all peer TLS CAs.
 	@$(DOCKER) run --rm \
 		$(RUN_AS) \
 		-v "$(FABRICX_DIR):/config" \
 		$(TOOLS_IMAGE) \
-		sh -c 'cryptogen generate --config=/config/crypto-config.yaml --output=/config/crypto \
-			&& cat /config/crypto/peerOrganizations/org1.example.com/msp/tlscacerts/tlsca.org1.example.com-cert.pem \
-			       /config/crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem \
-			       > /config/crypto/client-tls-ca.pem'
+		cryptogen generate --config=/config/crypto-config.yaml --output=/config/crypto
 	@$(DOCKER) run --rm \
 		$(RUN_AS) \
 		-v "$(FABRICX_DIR):/config" \

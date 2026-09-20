@@ -134,7 +134,6 @@ Batching:
   BatchSize:
     MaxMessageCount: 10000
     AbsoluteMaxBytes: 10485760
-    PreferredMaxBytes: 2097152
   RequestMaxBytes: 1048576
 
 MaxPartyID: 4

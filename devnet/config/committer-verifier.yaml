@@ -14,10 +14,9 @@ monitoring:
   tls:
     mode: none
 
-batch-size-cutoff: 50
-batch-time-cutoff: 1ms
-channel-buffer-size: 50
+# more parallelism and a much shorter batch cutoff than the defaults (4 and 500ms), for low latency
 parallelism: 40
+batch-time-cutoff: 1ms
 
 logging:
   logSpec: info:grpc=error

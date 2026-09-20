@@ -11,7 +11,7 @@ networks:
 
 services:
   test-committer:
-    image: docker.io/hyperledger/fabric-x-committer-test-node:1.0.0
+    image: docker.io/hyperledger/fabric-x-committer-test-node:1.0.5
     pull_policy: missing
     restart: unless-stopped
     container_name: test-committer
@@ -40,7 +40,7 @@ services:
       - ./crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp:/msp:ro,Z
       # Override config files (image defaults use built-in crypto at /root/artifacts/)
       - ./config/mock-orderer.yaml:/root/config/mock-orderer.yaml:ro,Z
-      - ./config/committer-sidecar-dev.yaml:/root/config/sidecar.yaml:ro,Z
+      - ./config/committer-sidecar.yaml:/root/config/sidecar.yaml:ro,Z
       - ./config/committer-coordinator.yaml:/root/config/coordinator.yaml:ro,Z
       - ./config/committer-verifier.yaml:/root/config/verifier.yaml:ro,Z
       - ./config/committer-validator.yaml:/root/config/vc.yaml:ro,Z
@@ -48,6 +48,9 @@ services:
     environment:
       # Internal endpoints — all services run in the same container
       SC_SIDECAR_COMMITTER_ENDPOINT: "localhost:9001"
+      # The mock orderer is a single CFT node, and its config block is mounted at a different path
+      SC_SIDECAR_ORDERER_FAULT_TOLERANCE_LEVEL: "CFT"
+      SC_SIDECAR_ORDERER_LATEST_KNOWN_CONFIG_BLOCK_PATH: "/root/artifacts/config-block.pb.bin"
       SC_COORDINATOR_VERIFIER_ENDPOINTS: "localhost:5001"
       SC_COORDINATOR_VALIDATOR_COMMITTER_ENDPOINTS: "localhost:6001"
       # Database credentials and endpoint for vc and query
@@ -65,6 +68,7 @@ services:
       timeout: 3s
       retries: 30
       start_period: 10s
+      start_interval: 1s
     networks:
       fabric-x:
         aliases:

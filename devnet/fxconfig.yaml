@@ -33,5 +33,3 @@ notifications:
     clientKey: /tls/server.key
     rootCerts:
       - /org-tls-ca.pem
-  connectionTimeout: 10s
-  waitingTimeout: 20s
