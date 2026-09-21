@@ -78,7 +78,7 @@ func (f *ClaimViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 // Claim claims a previously locked token using its pre-image, crediting the given wallet.
-func (f FabricSmartClient) Claim(ctx context.Context, wallet string, preImage []byte) (txID string, err error) {
+func (f FabricSmartClient) Claim(ctx context.Context, wallet string, preImage []byte, tmsID *token.TMSID) (txID string, err error) {
 	logger.Infof("going to claim htlc token into [%s]", wallet)
 	mgr, err := viewregistry.GetManager(f.node)
 	if err != nil {
@@ -86,6 +86,7 @@ func (f FabricSmartClient) Claim(ctx context.Context, wallet string, preImage []
 	}
 	res, err := mgr.InitiateView(ctx, &ClaimView{
 		ClaimOptions: &ClaimOptions{
+			TMSID:    tmsID,
 			Wallet:   wallet,
 			PreImage: preImage,
 		},

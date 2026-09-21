@@ -8,8 +8,13 @@ package routes
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"math"
+	"net/http"
+	"time"
 
+	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/LFDT-Panurus/panurus/token/services/storage/db/driver"
 	"github.com/hyperledger/fabric-samples/token-sdk/owner/service"
 )
@@ -133,6 +138,94 @@ func (s Server) Transfer(ctx context.Context, request TransferRequestObject) (Tr
 	return Transfer200JSONResponse{TransferSuccessJSONResponse{
 		Message: "ok",
 		Payload: res,
+	}}, nil
+}
+
+// toTMSID converts the optional TMS identifier of a request. A nil result selects the node's default TMS.
+func toTMSID(id *TMSID) *token.TMSID {
+	if id == nil {
+		return nil
+	}
+	return &token.TMSID{Network: id.Network, Channel: id.Channel, Namespace: id.Namespace}
+}
+
+// toDeadline converts seconds to a duration. Zero would silently select the Token SDK default (one hour),
+// so only positive values that fit in a time.Duration are accepted.
+func toDeadline(seconds int64) (time.Duration, bool) {
+	if seconds < 1 || seconds > math.MaxInt64/int64(time.Second) {
+		return 0, false
+	}
+	return time.Duration(seconds) * time.Second, true
+}
+
+func badRequest(message string) Error {
+	return Error{Message: "bad request", Payload: message}
+}
+
+// Lock tokens in a hash time-locked contract (HTLC)
+// (POST /owner/accounts/{id}/lock)
+func (s Server) Lock(ctx context.Context, request LockRequestObject) (LockResponseObject, error) {
+	body := request.Body
+	deadline, ok := toDeadline(body.Deadline)
+	if !ok {
+		return LockdefaultJSONResponse{Body: badRequest("deadline must be a positive number of seconds"), StatusCode: http.StatusBadRequest}, nil
+	}
+	var hash []byte
+	if body.Hash != nil {
+		hash = *body.Hash
+		if len(hash) != sha256.Size {
+			return LockdefaultJSONResponse{Body: badRequest(fmt.Sprintf("hash must be a %d byte SHA-256 digest", sha256.Size)), StatusCode: http.StatusBadRequest}, nil
+		}
+	}
+
+	res, err := s.fsc.Lock(ctx, body.Amount.Code, body.Amount.Value, request.Id, body.Counterparty.Account, body.Counterparty.Node, deadline, hash, toTMSID(body.TmsId))
+	if err != nil {
+		return nil, err
+	}
+
+	payload := LockResult{TxId: res.TxID, Hash: res.Hash}
+	if len(res.PreImage) > 0 {
+		payload.Preimage = &res.PreImage
+	}
+	return Lock200JSONResponse{LockSuccessJSONResponse{
+		Message: "ok",
+		Payload: payload,
+	}}, nil
+}
+
+// Claim locked tokens by revealing the pre-image
+// (POST /owner/accounts/{id}/claim)
+func (s Server) Claim(ctx context.Context, request ClaimRequestObject) (ClaimResponseObject, error) {
+	if len(request.Body.Preimage) == 0 {
+		return ClaimdefaultJSONResponse{Body: badRequest("preimage is required"), StatusCode: http.StatusBadRequest}, nil
+	}
+
+	txID, err := s.fsc.Claim(ctx, request.Id, request.Body.Preimage, toTMSID(request.Body.TmsId))
+	if err != nil {
+		return nil, err
+	}
+
+	return Claim200JSONResponse{ClaimSuccessJSONResponse{
+		Message: "ok",
+		Payload: txID,
+	}}, nil
+}
+
+// Reclaim expired locked tokens
+// (POST /owner/accounts/{id}/reclaim)
+func (s Server) Reclaim(ctx context.Context, request ReclaimRequestObject) (ReclaimResponseObject, error) {
+	if len(request.Body.Hash) == 0 {
+		return ReclaimdefaultJSONResponse{Body: badRequest("hash is required"), StatusCode: http.StatusBadRequest}, nil
+	}
+
+	txID, err := s.fsc.Reclaim(ctx, request.Id, request.Body.Hash, toTMSID(request.Body.TmsId))
+	if err != nil {
+		return nil, err
+	}
+
+	return Reclaim200JSONResponse{ReclaimSuccessJSONResponse{
+		Message: "ok",
+		Payload: txID,
 	}}, nil
 }
 
