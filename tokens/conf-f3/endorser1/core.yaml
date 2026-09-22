@@ -68,9 +68,11 @@ fabric:
         path: ./keys/fabric/endorser
     tls:
       enabled: true
+      rootCAs:
+        files:
+          - ./keys/fabric/peer-tls-ca.crt
     peers:
       - address: peer0.org1.example.com:7051
-        tlsRootCertFile: ./keys/fabric/peer-tls-ca.crt
     channels:
       - name: mychannel
         default: true

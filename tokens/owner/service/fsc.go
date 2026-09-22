@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/services/logging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/id"
+	"github.com/LFDT-Panurus/panurus/token/services/storage/db/guard"
 	"github.com/LFDT-Panurus/panurus/token/services/storage/db/sql/query/pagination"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -181,7 +182,15 @@ func (f FabricSmartClient) GetTransactions(ctx context.Context, wallet string) (
 		return nil, errors.New("failed to initialize transaction owner")
 	}
 
-	it, err := owner.Transactions(ctx, params, pagination.None())
+	// Unlimited pagination (pagination.None()) is rejected by Panurus's storage guard since
+	// v0.22.0; this endpoint has no REST-level paging, so ask for a single page as large as the
+	// guard's own default cap, which preserves the previous "return everything" behavior for any
+	// realistic sample workload.
+	page, err := pagination.Offset(0, guard.DefaultMaxPageSize)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating pagination")
+	}
+	it, err := owner.Transactions(ctx, params, page)
 	if err != nil || it == nil {
 		return txs, errors.Wrap(err, "failed querying transactions from db")
 	}

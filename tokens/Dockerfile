@@ -4,7 +4,7 @@
 #
 
 # build stage
-FROM golang:1.26.7 AS builder
+FROM golang:1.27.1 AS builder
 WORKDIR /go/src/app
 
 ARG NODE_TYPE="owner"

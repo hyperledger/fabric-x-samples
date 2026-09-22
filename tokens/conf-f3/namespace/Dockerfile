@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-FROM golang:1.26.7-bookworm AS builder
+FROM golang:1.27.1-bookworm AS builder
 
 ENV GOCACHE=/go-cache \
     GOMODCACHE=/gomod-cache \
@@ -12,7 +12,7 @@ ENV GOCACHE=/go-cache \
 # Change the hash to checkout a different commit / version tag. It should be the same as in app/go.mod.
 RUN git clone https://github.com/LFDT-Panurus/panurus.git && \
     cd panurus && \
-    git checkout aa4e931b6a8ed2c3b0d6457b84a28c180d9a63a3
+    git checkout c90448b4c2635862fb5b9b41b8be2df7934ccb38
 
 RUN --mount=type=cache,target=/gomod-cache \
     --mount=type=cache,target=/go-cache \
