@@ -166,7 +166,7 @@ func (a *LockAcceptView) Call(vctx view.Context) (any, error) {
 
 // Lock locks an amount of a certain token type into an HTLC script, returning the pre-image the
 // locker must pass to the claimer out of band, and the hash the claimer/reclaimer will reference.
-func (f FabricSmartClient) Lock(ctx context.Context, tokenType string, quantity uint64, sender string, recipient string, recipientNode string, deadline time.Duration, hash []byte) (LockResult, error) {
+func (f FabricSmartClient) Lock(ctx context.Context, tokenType string, quantity uint64, sender string, recipient string, recipientNode string, deadline time.Duration, hash []byte, tmsID *token.TMSID) (LockResult, error) {
 	logger.Infof("going to lock %d %s from [%s] for [%s] on [%s]", quantity, tokenType, sender, recipient, recipientNode)
 	mgr, err := viewregistry.GetManager(f.node)
 	if err != nil {
@@ -174,6 +174,7 @@ func (f FabricSmartClient) Lock(ctx context.Context, tokenType string, quantity 
 	}
 	res, err := mgr.InitiateView(ctx, &LockView{
 		LockOptions: &LockOptions{
+			TMSID:               tmsID,
 			Wallet:              sender,
 			TokenType:           tokenType,
 			Quantity:            quantity,

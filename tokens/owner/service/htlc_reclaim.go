@@ -75,7 +75,7 @@ func (f *ReclaimViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 // Reclaim reclaims a single expired locked token identified by hash, crediting it back to the given wallet.
-func (f FabricSmartClient) Reclaim(ctx context.Context, wallet string, hash []byte) (txID string, err error) {
+func (f FabricSmartClient) Reclaim(ctx context.Context, wallet string, hash []byte, tmsID *token.TMSID) (txID string, err error) {
 	logger.Infof("going to reclaim htlc token into [%s]", wallet)
 	mgr, err := viewregistry.GetManager(f.node)
 	if err != nil {
@@ -83,6 +83,7 @@ func (f FabricSmartClient) Reclaim(ctx context.Context, wallet string, hash []by
 	}
 	res, err := mgr.InitiateView(ctx, &ReclaimView{
 		ReclaimOptions: &ReclaimOptions{
+			TMSID:  tmsID,
 			Wallet: wallet,
 			Hash:   hash,
 		},

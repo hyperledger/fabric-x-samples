@@ -6,9 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 
 The **Token SDK Sample** demonstrates how to:
 
-- Build a simple token-based application using the [Token SDK](https://github.com/hyperledger-labs/fabric-token-sdk).
+- Build a simple token-based application using the [Token SDK](https://github.com/LFDT-Panurus/panurus).
 - Connect the application to both [Fabric-X](https://github.com/hyperledger/fabric-x) and classic [Fabric](https://github.com/hyperledger/fabric) networks.
-- Issue and transfer tokens via a REST API.
+- Issue, transfer, redeem and lock (HTLC) tokens via a REST API.
 
 ## Table of Contents
 
@@ -32,6 +32,7 @@ The **Token SDK Sample** demonstrates how to:
   - [Interacting with the Application](#interacting-with-the-application)
   - [Example: Issue tokens](#example-issue-tokens)
   - [Example: Transfer tokens](#example-transfer-tokens)
+  - [Example: HTLC lock, claim and reclaim](#example-htlc-lock-claim-and-reclaim)
   - [Teardown and cleanup](#teardown-and-cleanup)
   - [Development](#development)
   - [Debug mode](#debug-mode)
@@ -41,7 +42,7 @@ The **Token SDK Sample** demonstrates how to:
 
 ## About the Sample
 
-This demo provides a set of services exposing REST APIs that integrate with the [Token SDK](https://github.com/hyperledger-labs/fabric-token-sdk)
+This demo provides a set of services exposing REST APIs that integrate with the [Token SDK](https://github.com/LFDT-Panurus/panurus)
 to issue, transfer, and redeem tokens backed by a **Hyperledger Fabric(x)** network for validation and settlement.
 
 Together, these services form a _Layer 2 network_ capable of transacting privately among participants.
@@ -49,7 +50,7 @@ The ledger data does not reveal balances, transaction amounts, or participant id
 Tokens are represented as UTXOs owned by pseudonymous keys, with details hidden through **Zero-Knowledge Proofs (ZKPs)**.
 
 The application follows the Fabric-X programming model, where business parties directly endorse transactions—rather than Fabric peers executing chaincode.
-Note that the [Token SDK](https://github.com/hyperledger-labs/fabric-token-sdk) builds on top of the [Fabric Smart Client (FSC)](https://github.com/hyperledger-labs/fabric-smart-client), a framework to build distributed applications for Fabric(x).
+Note that the [Token SDK](https://github.com/LFDT-Panurus/panurus) builds on top of the [Fabric Smart Client (FSC)](https://github.com/hyperledger-labs/fabric-smart-client), a framework to build distributed applications for Fabric(x).
 
 This sample helps you get familiar with Token SDK features and serves as a starting point for your own proof of concept.
 
@@ -282,6 +283,52 @@ curl http://localhost:9500/owner/accounts/alice/transfer -d '{
 
 curl -X GET http://localhost:9600/owner/accounts/dan/transactions | jq
 curl -X GET http://localhost:9500/owner/accounts/alice/transactions | jq
+```
+
+## Example: HTLC lock, claim and reclaim
+
+A hash time-locked contract (HTLC) lets `alice` lock tokens so that `dan` can only take them by revealing a secret
+(the _pre-image_) before a deadline. If `dan` does not claim in time, `alice` can reclaim the tokens after the deadline.
+It is the building block for atomic swaps between parties that do not trust each other.
+
+Hashes and pre-images are exchanged as standard base64 strings. `deadline` is the number of seconds from now.
+On a node with more than one token management service you can select one with an optional
+`"tmsId": {"network": "default", "channel": "mychannel", "namespace": "token_namespace"}` (the channel is `arma` on Fabric-X).
+
+`alice` locks `20 TOK` for `dan` for one hour. The node generates the pre-image and returns it with its SHA-256 hash;
+`alice` passes the pre-image to `dan` out of band. `dan` then claims the tokens:
+
+```bash
+LOCK=$(curl -s http://localhost:9500/owner/accounts/alice/lock -d '{
+    "amount": {"code": "TOK","value": 20},
+    "counterparty": {"node": "owner2","account": "dan"},
+    "deadline": 3600
+}')
+echo "$LOCK" | jq
+PREIMAGE=$(echo "$LOCK" | jq -r .payload.preimage)
+
+curl http://localhost:9600/owner/accounts/dan/claim -d '{"preimage": "'"$PREIMAGE"'"}'
+curl http://localhost:9600/owner/accounts/dan | jq
+```
+
+If nobody claims, `alice` can reclaim after the deadline, identifying the lock by its hash:
+
+```bash
+LOCK=$(curl -s http://localhost:9500/owner/accounts/alice/lock -d '{
+    "amount": {"code": "TOK","value": 20},
+    "counterparty": {"node": "owner2","account": "dan"},
+    "deadline": 30
+}')
+HASH=$(echo "$LOCK" | jq -r .payload.hash)
+sleep 35
+curl http://localhost:9500/owner/accounts/alice/reclaim -d '{"hash": "'"$HASH"'"}'
+```
+
+If you already hold a secret, pass its SHA-256 digest as `hash` in the lock request. The response then contains no pre-image:
+
+```bash
+SECRET=$(openssl rand -base64 24)   # the pre-image
+HASH=$(printf '%s' "$SECRET" | openssl base64 -d -A | openssl dgst -sha256 -binary | openssl base64 -A)
 ```
 
 ## Teardown and cleanup

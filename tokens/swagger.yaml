@@ -10,6 +10,10 @@ info:
     To try it out, let the Issuer issue some funds to one of the users. Watch the balances
     get updated and see the transaction history. Transfer it to another account, or redeem
     the tokens to destroy them.
+
+    Tokens can also be locked in a hash time-locked contract (HTLC): the recipient claims them by revealing a
+    secret pre-image before the deadline, otherwise the sender can reclaim them after it. Hashes and pre-images
+    are base64 strings.
 servers:
   # - url: http://localhost:9500/
   #   description: auditor
@@ -216,6 +220,90 @@ paths:
         default:
           $ref: "#/components/responses/ErrorResponse"
 
+  /owner/accounts/{id}/lock:
+    servers:
+      - url: http://localhost:9500/
+        description: alice and bob
+      - url: http://localhost:9600/
+        description: carlos and dan
+    summary: Lock tokens in a hash time-locked contract (HTLC)
+    post:
+      tags:
+        - owner
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/LockSuccess"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+      operationId: lock
+      summary: Lock tokens in a hash time-locked contract (HTLC)
+      description: |
+        Locks tokens owned by this account so that the counterparty can claim them by revealing a secret
+        pre-image before the deadline, or the sender can reclaim them after the deadline.
+
+        If no hash is given, the node generates a random pre-image and returns it together with its
+        SHA-256 hash. Hand the pre-image to the counterparty out of band.
+
+  /owner/accounts/{id}/claim:
+    servers:
+      - url: http://localhost:9500/
+        description: alice and bob
+      - url: http://localhost:9600/
+        description: carlos and dan
+    summary: Claim tokens that were locked for this account
+    post:
+      tags:
+        - owner
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ClaimSuccess"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+      operationId: claim
+      summary: Claim tokens that were locked for this account
+
+  /owner/accounts/{id}/reclaim:
+    servers:
+      - url: http://localhost:9500/
+        description: alice and bob
+      - url: http://localhost:9600/
+        description: carlos and dan
+    summary: Reclaim expired locked tokens
+    post:
+      tags:
+        - owner
+      parameters:
+        - $ref: "#/components/parameters/id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReclaimRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ReclaimSuccess"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+      operationId: reclaim
+      summary: Reclaim expired locked tokens
+
   # Operations
   /healthz:
     get:
@@ -353,6 +441,52 @@ components:
                 description: ok
             example:
               message: ok
+    LockSuccess:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                $ref: "#/components/schemas/LockResult"
+    ClaimSuccess:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                type: string
+                description: Transaction id
+                example: 7c26ed6e5e05f7de81a82691b66b1069d1507d9edf3c7b78ea1fa98557ee57b4
+    ReclaimSuccess:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+              - payload
+            properties:
+              message:
+                type: string
+              payload:
+                type: string
+                description: Transaction id
+                example: 7c26ed6e5e05f7de81a82691b66b1069d1507d9edf3c7b78ea1fa98557ee57b4
 
     ErrorResponse:
       description: Error response
@@ -490,6 +624,91 @@ components:
         message:
           description: optional message that will be visible to the issuer
           type: string
+    TMSID:
+      description: Identifies a token management service (TMS) on the node. Omit it to use the node's default TMS.
+      type: object
+      required:
+        - network
+        - channel
+        - namespace
+      properties:
+        network:
+          type: string
+          example: default
+        channel:
+          type: string
+          example: mychannel
+        namespace:
+          type: string
+          example: token_namespace
+    LockRequest:
+      description: Instructions to lock tokens in a hash time-locked contract (HTLC)
+      required:
+        - amount
+        - counterparty
+        - deadline
+      type: object
+      properties:
+        amount:
+          $ref: "#/components/schemas/Amount"
+        counterparty:
+          $ref: "#/components/schemas/Counterparty"
+        deadline:
+          description: Seconds from now after which the sender can reclaim the tokens if nobody has claimed them
+          type: integer
+          format: int64
+          minimum: 1
+          example: 3600
+        hash:
+          description: >-
+            Base64 (standard, padded) SHA-256 digest (32 bytes) of a pre-image you already hold, e.g. when the other
+            side of a cross-network swap chose the secret. Omit it to let the node generate a pre-image and its hash.
+          type: string
+          format: byte
+        tmsId:
+          $ref: "#/components/schemas/TMSID"
+    ClaimRequest:
+      description: Instructions to claim locked tokens by revealing the pre-image
+      required:
+        - preimage
+      type: object
+      properties:
+        preimage:
+          description: Base64 encoded pre-image whose SHA-256 hash matches the lock
+          type: string
+          format: byte
+        tmsId:
+          $ref: "#/components/schemas/TMSID"
+    ReclaimRequest:
+      description: Instructions to reclaim an expired lock
+      required:
+        - hash
+      type: object
+      properties:
+        hash:
+          description: Base64 encoded hash of the lock to reclaim, as returned by the lock operation
+          type: string
+          format: byte
+        tmsId:
+          $ref: "#/components/schemas/TMSID"
+    LockResult:
+      description: The transaction id of the lock, plus the pre-image and hash that unlock it
+      required:
+        - txId
+        - hash
+      type: object
+      properties:
+        txId:
+          type: string
+          description: Transaction id
+        preimage:
+          description: Base64 encoded secret. Only present when the node generated it (no hash was supplied in the request).
+          type: string
+          format: byte
+        hash:
+          description: Base64 encoded SHA-256 hash of the pre-image, as recorded in the lock
+          type: string
+          format: byte
     Error:
       required:
         - message
