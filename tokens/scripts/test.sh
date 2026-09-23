@@ -166,7 +166,10 @@ function wait_for_balance() {
     local port="$1" account="$2" code="$3" expected="$4" what="$5"
     local attempts="${BALANCE_MAX_ATTEMPTS:-15}" actual="" i
     for ((i = 1; i <= attempts; i++)); do
-        actual=$(get_balance "$port" "$account" "$code")
+        # get_balance can transiently fail (a connection hiccup, a 5xx before finality catches up)
+        # -- exactly what this loop exists to tolerate. Under set -eE, a bare failing command
+        # substitution would abort the whole script instead of letting the loop retry, so guard it.
+        actual=$(get_balance "$port" "$account" "$code") || actual=""
         if [[ "$actual" == "$expected" ]]; then
             echo "OK: ${what}: ${account} holds ${actual} ${code}"
             return 0

@@ -7,11 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
-	"math/big"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/LFDT-Panurus/panurus/token/services/ttx"
 )
 
@@ -37,14 +34,6 @@ func (a *AcceptCashView) Call(context view.Context) (any, error) {
 	assert.NoError(err, "failed getting outputs")
 	assert.True(outputs.Count() > 0)
 	assert.True(outputs.ByRecipient(id).Count() > 0)
-
-	// The recipient here is checking that, for each type of token she is receiving,
-	// she does not hold already more than 3000 units of that type.
-	for _, output := range outputs.ByRecipient(id).Outputs() {
-		balance, err := ttx.MyWallet(context, token.WithTMSID(tx.TMSID())).Balance(context.Context(), ttx.WithType(output.Type))
-		assert.NoError(err, "failed retrieving balance for type [%s]", output.Type)
-		assert.True(balance.Cmp(big.NewInt(3000)) <= 0, "cannot have more than 3000 unspent quantity for type [%s]", output.Type)
-	}
 
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
