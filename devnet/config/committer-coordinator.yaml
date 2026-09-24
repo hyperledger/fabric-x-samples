@@ -34,14 +34,5 @@ validator-committer:
     ca-cert-paths:
       - /org-tls-ca.pem
 
-dependency-graph:
-  num-of-local-dep-constructors: 1
-  waiting-txs-limit: 100000
-
-per-channel-buffer-size-per-goroutine: 10
-
-min-batch-keys: 1
-max-batch-wait: 1ms
-
 logging:
   logSpec: info:grpc=error

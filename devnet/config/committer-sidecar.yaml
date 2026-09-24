@@ -14,25 +14,16 @@ monitoring:
   tls: *tlsConfig
 
 orderer:
+  # BFT (also the default) makes the sidecar monitor the orderer for block withholding
   fault-tolerance-level: BFT
   latest-known-config-block-path: /bootstrap/genesis.block
   tls:
     mode: mtls
     cert-path: /node-tls/server.crt
     key-path: /node-tls/server.key
-    ca-cert-paths:
-      - /orderer-cas/orderer-org-1/msp/tlscacerts/tlsca.orderer-org-1-cert.pem
-      - /orderer-cas/orderer-org-2/msp/tlscacerts/tlsca.orderer-org-2-cert.pem
-      - /orderer-cas/orderer-org-3/msp/tlscacerts/tlsca.orderer-org-3-cert.pem
-      - /orderer-cas/orderer-org-4/msp/tlscacerts/tlsca.orderer-org-4-cert.pem
   identity:
     msp-id: Org1MSP
     msp-dir: /msp
-    bccsp:
-      Default: SW
-      SW:
-        Security: 256
-        Hash: SHA2
 
 committer:
   endpoint: committer-coordinator:9001
@@ -40,17 +31,12 @@ committer:
 
 ledger:
   path: /ledger
+  # fsync every 100th bloc; blocks lost in a crash are re-fetched from the orderer on restart
   sync-interval: 100
 
 notification:
+  # limit, and default, for how long a client waits for a transaction's notification (upstream default: 1m)
   max-timeout: 10m
-  max-active-tx-ids: 100_000
-  max-tx-ids-per-request: 1000
-  stream-write-timeout: 30s
-
-last-committed-block-set-interval: 5s
-waiting-txs-limit: 100_000
-channel-buffer-size: 100
 
 logging:
-  logSpec: "info"
+  logSpec: info:grpc=error

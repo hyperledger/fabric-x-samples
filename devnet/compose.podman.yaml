@@ -39,6 +39,8 @@ services:
     user: "0:0"
   orderer-party4-assembler:
     user: "0:0"
+  committer-init-db:
+    user: "0:0"
   committer-verifier:
     user: "0:0"
   committer-validator:

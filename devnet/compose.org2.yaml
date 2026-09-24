@@ -1,4 +1,4 @@
-# Org2 committer stack (6 containers) — mirrors the Org1 committer services for org2.example.com.
+# Org2 committer stack (6 containers + a one-shot init-db) — mirrors the Org1 committer services for org2.example.com.
 # Org2MSP is in the genesis block (see configtx.yaml Application.Organizations).
 #
 # Start together with the default stack:
@@ -24,11 +24,30 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 5s
+      start_interval: 1s
+    networks:
+      - fabric-x
+
+  # One-shot DB schema init (required since committer v1.0.5); see compose.yaml.
+  committer-org2-init-db:
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    pull_policy: missing
+    restart: "no"
+    user: "${UID:-1000}:${GID:-1000}"
+    command: init-db --config=/config/validator.yaml
+    volumes:
+      - ./config/committer-validator.yaml:/config/validator.yaml:ro,Z
+    environment:
+      SC_VC_DATABASE_ENDPOINTS: committer-org2-db:5432
+    depends_on:
+      committer-org2-db:
+        condition: service_healthy
     networks:
       - fabric-x
 
   committer-org2-verifier:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -37,11 +56,18 @@ services:
       - ./config/committer-verifier.yaml:/config/verifier.yaml:ro,Z
       - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-verifier.org2.example.com/tls:/node-tls:ro,Z
       - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
+    healthcheck:
+      test: ["CMD", "/bin/entrypoint", "healthcheck", "verifier", "--config", "/config/verifier.yaml"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   committer-org2-validator:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -55,11 +81,20 @@ services:
     depends_on:
       committer-org2-db:
         condition: service_healthy
+      committer-org2-init-db:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/bin/entrypoint", "healthcheck", "vc", "--config", "/config/validator.yaml"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   committer-org2-coordinator:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -72,13 +107,22 @@ services:
       SC_COORDINATOR_VERIFIER_ENDPOINTS: committer-org2-verifier:5001
       SC_COORDINATOR_VALIDATOR_COMMITTER_ENDPOINTS: committer-org2-validator:6001
     depends_on:
-      - committer-org2-verifier
-      - committer-org2-validator
+      committer-org2-verifier:
+        condition: service_healthy
+      committer-org2-validator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/entrypoint", "healthcheck", "coordinator", "--config", "/config/coordinator.yaml"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   committer-org2-sidecar:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -90,19 +134,34 @@ services:
       - ./crypto/peerOrganizations/org2.example.com/peers/committer-org2-sidecar.org2.example.com/tls:/node-tls:ro,Z
       - ./crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/org-tls-ca.pem:ro,Z
       - ./crypto/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp:/msp:ro,Z
-      - ./crypto/ordererOrganizations:/orderer-cas:ro,Z
       - ./crypto/config-block.pb.bin:/bootstrap/genesis.block:ro,Z
       - ./data/committer-org2/sidecar-ledger:/ledger:Z
     environment:
       SC_SIDECAR_ORDERER_IDENTITY_MSP_ID: Org2MSP
       SC_SIDECAR_COMMITTER_ENDPOINT: committer-org2-coordinator:9001
     depends_on:
-      - committer-org2-coordinator
+      committer-org2-coordinator:
+        condition: service_healthy
+      orderer-party1-router:
+        condition: service_healthy
+      orderer-party2-router:
+        condition: service_healthy
+      orderer-party3-router:
+        condition: service_healthy
+      orderer-party4-router:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/entrypoint", "healthcheck", "sidecar", "--config", "/config/sidecar.yaml"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
 
   committer-org2-query-service:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.0
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -118,11 +177,14 @@ services:
     depends_on:
       committer-org2-db:
         condition: service_healthy
+      committer-org2-init-db:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:2117/metrics"]
-      interval: 2s
+      test: ["CMD", "/bin/entrypoint", "healthcheck", "query", "--config", "/config/query-service.yaml"]
+      interval: 5s
       timeout: 3s
-      retries: 30
+      retries: 20
       start_period: 10s
+      start_interval: 1s
     networks:
       - fabric-x
