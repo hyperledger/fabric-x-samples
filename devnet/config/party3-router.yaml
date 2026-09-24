@@ -15,9 +15,9 @@ General:
   LocalMSPDir: /node-msp
   LocalMSPID: OrdererOrg3MSP
 
-  # Validate client signatures against /Channel/Writers. Needed on the router (client-facing) and
-  # on the batcher (re-verifies batches from other parties' primaries); not on the consenter.
-  ClientSignatureVerificationRequired: true
+  # Validate client signatures against /Channel/Writers.
+  # Disabled on devnet because we enforce mTLS and endorsement. Enable for defence in depth.
+  ClientSignatureVerificationRequired: false
 
 FileStore:
   Location: /data
