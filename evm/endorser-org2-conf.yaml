@@ -1,0 +1,50 @@
+# Configuration for Org2's standalone endorser (compose.gateway.yaml).
+# Paths are absolute as mounted in the container; hosts are Docker service aliases.
+#
+# No gateway: section, so fxevm runs only an endorser: it re-executes every EVM
+# transaction the Org1 gateway sends it and signs the result with Org2's
+# identity. The namespace policy requires both signatures, so no transaction
+# commits without Org2's agreement.
+
+network:
+  protocol: fabric-x
+  channel: mychannel
+  namespace: basic
+  ns-version: "1.0"
+  chain-id: 4011
+
+# The committer this endorser syncs its state from. Demo shortcut: a real Org2
+# runs its own committer; here it reads from Org1's, using a client TLS
+# certificate issued by Org1 (Org1's committer only admits Org1's TLS CA).
+committer:
+  endpoint:
+    host: committer-sidecar
+    port: 4001
+  tls:
+    mode: mtls
+    cert-path: /committer-client-tls/client.crt
+    key-path: /committer-client-tls/client.key
+    ca-cert-paths:
+      - /committer-client-tls/ca.crt
+
+endorser:
+  name: org2
+  identity:
+    msp-id: Org2MSP
+    msp-dir: /endorser-msp
+  database:
+    database: sqlite
+    connection-string: "file:/data/endorser-org2.db"
+
+  # gRPC listener the Org1 gateway dials. Only clients with a certificate from
+  # Org1's TLS CA are admitted.
+  server:
+    endpoint:
+      host: 0.0.0.0
+      port: 7051
+    tls:
+      mode: mtls
+      cert-path: /endorser-tls/server.crt
+      key-path: /endorser-tls/server.key
+      ca-cert-paths:
+        - /org1-tls-ca.pem

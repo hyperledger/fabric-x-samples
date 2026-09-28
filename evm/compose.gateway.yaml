@@ -2,13 +2,16 @@ name: fabric-x-evm
 
 # EVM JSON-RPC gateway.
 #
+# Org1 runs the gateway with its endorser embedded; Org2 runs a standalone
+# endorser that the gateway dials for its signature on every transaction.
+#
 # Requires the Fabric-X network (devnet) to be running first:
 #   make start-node   start network + gateway (port 8545)
 #   make start        start network + gateway + block explorer
 
 services:
   gateway:
-    image: ghcr.io/hyperledger/fabric-x-evm:0.1.2
+    image: ghcr.io/hyperledger/fabric-x-evm:0.2.0
     restart: unless-stopped
     container_name: gateway
     user: "${UID:-1000}:${GID:-1000}"
@@ -26,10 +29,39 @@ services:
       - ../devnet/crypto/ordererOrganizations/orderer-org-2/msp/tlscacerts/tlsca.orderer-org-2-cert.pem:/crypto/orderer2-tls-ca.pem:ro,Z
       - ../devnet/crypto/ordererOrganizations/orderer-org-3/msp/tlscacerts/tlsca.orderer-org-3-cert.pem:/crypto/orderer3-tls-ca.pem:ro,Z
       - ../devnet/crypto/ordererOrganizations/orderer-org-4/msp/tlscacerts/tlsca.orderer-org-4-cert.pem:/crypto/orderer4-tls-ca.pem:ro,Z
+      - ../devnet/crypto/peerOrganizations/org2.example.com/msp/tlscacerts/tlsca.org2.example.com-cert.pem:/crypto/org2-tls-ca.pem:ro,Z
       - ./gateway-conf.yaml:/config/gateway-conf.yaml:ro,Z
       - ./data/gateway:/data:Z
     healthcheck:
       test: ["CMD", "fxevm", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    depends_on:
+      endorser-org2:
+        condition: service_healthy
+
+  endorser-org2:
+    image: ghcr.io/hyperledger/fabric-x-evm:0.2.0
+    restart: unless-stopped
+    container_name: endorser-org2
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["start", "--config", "/config/endorser-org2-conf.yaml"]
+    networks:
+      fabric-x:
+        aliases:
+          - endorser.org2.example.com
+    volumes:
+      - ../devnet/crypto/peerOrganizations/org2.example.com/peers/endorser.org2.example.com/msp:/endorser-msp:ro,Z
+      - ../devnet/crypto/peerOrganizations/org2.example.com/peers/endorser.org2.example.com/tls:/endorser-tls:ro,Z
+      - ../devnet/crypto/peerOrganizations/org1.example.com/msp/tlscacerts/tlsca.org1.example.com-cert.pem:/org1-tls-ca.pem:ro,Z
+      # Org1-issued client TLS cert for reading Org1's committer (see endorser-org2-conf.yaml).
+      - ../devnet/crypto/peerOrganizations/org1.example.com/users/User1@org1.example.com/tls:/committer-client-tls:ro,Z
+      - ./endorser-org2-conf.yaml:/config/endorser-org2-conf.yaml:ro,Z
+      - ./data/endorser-org2:/data:Z
+    healthcheck:
+      test: ["CMD", "fxevm", "healthcheck", "--addr", "localhost:7051"]
       interval: 2s
       timeout: 3s
       retries: 30

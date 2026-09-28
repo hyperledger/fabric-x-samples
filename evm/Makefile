@@ -27,8 +27,8 @@ blockscout.env:
 .PHONY: start-node
 start-node:
 	@$(MAKE) -C ../devnet start
-	@$(MAKE) -C ../devnet init-namespace NS=basic POLICY="OR('Org1MSP.member')"
-	@mkdir -p ./data/gateway
+	@$(MAKE) -C ../devnet init-namespace NS=basic POLICY="AND('Org1MSP.member','Org2MSP.member')"
+	@mkdir -p ./data/gateway ./data/endorser-org2
 	@$(COMPOSE) -f compose.gateway.yaml up -d
 	@echo "Waiting for gateway to be healthy..."
 	@until [ "$$($(DOCKER) inspect -f '{{.State.Health.Status}}' gateway 2>/dev/null)" != "starting" ]; do sleep 1; done

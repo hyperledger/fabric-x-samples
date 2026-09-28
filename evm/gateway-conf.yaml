@@ -1,6 +1,10 @@
-# Configuration for running fxevm inside Docker Compose (compose.yml).
-# Paths are absolute as mounted in the container; host is the Docker service alias.
-# Using in-memory databases because the test-committer doesn't keep state either.
+# Configuration for running fxevm inside Docker Compose (compose.gateway.yaml).
+# Paths are absolute as mounted in the container; hosts are Docker service aliases.
+#
+# One process runs both of Org1's roles: the gateway (JSON-RPC, ordering) and
+# Org1's embedded endorser (EVM execution, signing). The gateway also collects
+# Org2's endorsement from its standalone endorser (endorser-org2-conf.yaml).
+# All state is kept in SQLite under /data, so it survives restarts.
 
 network:
   protocol: fabric-x
@@ -9,8 +13,26 @@ network:
   ns-version: "1.0"
   chain-id: 4011
 
+# The committer this process keeps in sync with.
+committer:
+  endpoint:
+    host: committer-sidecar
+    port: 4001
+  tls:
+    mode: mtls
+    cert-path: /user-tls/client.crt
+    key-path: /user-tls/client.key
+    ca-cert-paths:
+      - /user-tls/ca.crt
+
 gateway:
   listen: "0.0.0.0:8545"
+
+  # Host headers accepted from non-IP clients (DNS-rebinding guard). Blockscout
+  # reaches the gateway as http://gateway:8545 inside the compose network.
+  vhosts:
+    - localhost
+    - gateway
 
   identity:
     msp-id: Org1MSP
@@ -57,32 +79,26 @@ gateway:
         ca-cert-paths:
           - /crypto/orderer4-tls-ca.pem
 
-  committer:
-    endpoint:
-      host: committer-sidecar
-      port: 4001
-    tls:
-      mode: mtls
-      cert-path: /user-tls/client.crt
-      key-path: /user-tls/client.key
-      ca-cert-paths:
-        - /user-tls/ca.crt
-
-endorsers:
-  - name: org1
-    identity:
-      msp-id: Org1MSP
-      msp-dir: /endorser-msp
-    committer:
-      endpoint:
-        host: committer-sidecar
-        port: 4001
+  # Other orgs' endorsers, dialed over gRPC in addition to the embedded one.
+  # Every transaction needs all of their signatures, so it also depends on
+  # each of them being up.
+  endorsers:
+    - endpoint:
+        host: endorser.org2.example.com
+        port: 7051
       tls:
         mode: mtls
         cert-path: /user-tls/client.crt
         key-path: /user-tls/client.key
         ca-cert-paths:
-          - /user-tls/ca.crt
-    database:
-      database: sqlite
-      connection-string: "file:/data/endorser-org1.db"
+          - /crypto/org2-tls-ca.pem
+
+# This org's endorser, embedded in the gateway process.
+endorser:
+  name: org1
+  identity:
+    msp-id: Org1MSP
+    msp-dir: /endorser-msp
+  database:
+    database: sqlite
+    connection-string: "file:/data/endorser-org1.db"
