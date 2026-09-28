@@ -55,13 +55,13 @@ services:
       DATABASE_URL: postgresql://blockscout:${POSTGRES_PASSWORD}@db:5432/blockscout
       ECTO_USE_SSL: "false"
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      ETHEREUM_JSONRPC_VARIANT: geth
       ETHEREUM_JSONRPC_HTTP_URL: http://gateway:8545
-      ETHEREUM_JSONRPC_TRACE_URL: http://gateway:8545
-      INDEXER_INTERNAL_TRANSACTIONS_TRACER_TYPE: opcode
+      ETHEREUM_JSONRPC_WS_URL: ws://gateway:8545
       INDEXER_DISABLE_INTERNAL_TRANSACTIONS_FETCHER: "true"
       INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER: "true"
-      INDEXER_CATCHUP_BLOCKS_BATCH_SIZE: "5"
-      INDEXER_CATCHUP_BLOCKS_CONCURRENCY: "1"
+      INDEXER_CATCHUP_BLOCKS_BATCH_SIZE: "10"
+      INDEXER_CATCHUP_BLOCKS_CONCURRENCY: "2"
       INDEXER_DISABLE_USER_OPS_FETCHER: "true"
       INDEXER_DISABLE_BLOCK_REWARD_FETCHER: "true"
       INDEXER_DISABLE_TOKEN_INSTANCE_ERC_721_SANITIZE_FETCHER: "true"
@@ -124,8 +124,8 @@ services:
       NEXT_PUBLIC_APP_PORT: "8000"
       NEXT_PUBLIC_APP_PROTOCOL: http
       NEXT_PUBLIC_NETWORK_ID: "${CHAIN_ID:-4011}"
-      NEXT_PUBLIC_NETWORK_NAME: Fabric-X EVM
-      NEXT_PUBLIC_NETWORK_SHORT_NAME: FxEVM
+      NEXT_PUBLIC_NETWORK_NAME: Fabric-X
+      NEXT_PUBLIC_NETWORK_SHORT_NAME: FabX
       FAVICON_MASTER_URL: https://cdn.jsdelivr.net/gh/callback-io/allogo@main/public/logos/hyperledger/icon.svg
       NEXT_PUBLIC_NETWORK_ICON: https://cdn.jsdelivr.net/gh/callback-io/allogo@main/public/logos/hyperledger/icon.svg
       NEXT_PUBLIC_NETWORK_LOGO: https://cdn.jsdelivr.net/gh/callback-io/allogo@main/public/logos/hyperledger/icon.svg

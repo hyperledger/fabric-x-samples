@@ -6,6 +6,10 @@
 # Org2's endorsement from its standalone endorser (endorser-org2-conf.yaml).
 # All state is kept in SQLite under /data, so it survives restarts.
 
+logging:
+  # log API calls. Noisy with blockscout (polls every second)
+  # spec: info:gateway.api.eth=debug
+
 network:
   protocol: fabric-x
   channel: mychannel
