@@ -139,7 +139,7 @@ type TransactionRecord struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// TransferRequest Instructions to issue or transfer tokens to an account
+// TransferRequest Instructions to transfer tokens to an account
 type TransferRequest struct {
 	// Amount The amount to issue, transfer or redeem.
 	Amount Amount `json:"amount"`
@@ -151,11 +151,20 @@ type TransferRequest struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// Channel The TMS channel to check the balance on. Only read when network is also given.
+type Channel = string
+
 // Code The token code to filter on
 type Code = string
 
 // Id account id as registered at the Certificate Authority
 type Id = string
+
+// Namespace The TMS namespace to check the balance on. Only read when network is also given.
+type Namespace = string
+
+// Network The TMS network to check the balance on. Omit to use the node's default TMS; channel and namespace are read alongside it (each defaulting to "" if not also given).
+type Network = string
 
 // AccountSuccess defines model for AccountSuccess.
 type AccountSuccess struct {
@@ -228,7 +237,10 @@ type TransferSuccess struct {
 
 // OwnerAccountParams defines parameters for OwnerAccount.
 type OwnerAccountParams struct {
-	Code *Code `form:"code,omitempty" json:"code,omitempty"`
+	Code      *Code      `form:"code,omitempty" json:"code,omitempty"`
+	Network   *Network   `form:"network,omitempty" json:"network,omitempty"`
+	Channel   *Channel   `form:"channel,omitempty" json:"channel,omitempty"`
+	Namespace *Namespace `form:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
 // ClaimJSONRequestBody defines body for Claim for application/json ContentType.
@@ -339,6 +351,30 @@ func (siw *ServerInterfaceWrapper) OwnerAccount(w http.ResponseWriter, r *http.R
 	err = runtime.BindQueryParameter("form", true, false, "code", r.URL.Query(), &params.Code)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "network" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "network", r.URL.Query(), &params.Network)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "channel" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "channel", r.URL.Query(), &params.Channel)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "channel", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "namespace" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "namespace", r.URL.Query(), &params.Namespace)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "namespace", Err: err})
 		return
 	}
 

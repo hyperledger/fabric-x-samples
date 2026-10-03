@@ -16,4 +16,9 @@ data/
 **/namespace/*.json
 fabric-samples/
 
+# PLATFORM=evm: core.yaml is rendered from core.yaml.tmpl at setup time (scripts/setup_evm.sh),
+# and conf-evm/evm holds the generated EVM keys and contract-deployment artifacts.
+conf-evm/*/core.yaml
+conf-evm/evm/
+
 __debug_bin*

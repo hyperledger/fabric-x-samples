@@ -5,7 +5,7 @@
 #
 
 export PLATFORM
-ifeq ($(PLATFORM),fabric3)
+ifneq (,$(filter fabric3 evm,$(PLATFORM)))
 	COMPOSE_ARGS := -f compose.yml -f compose-endorser2.yml
 endif
 CONTAINER_CLI ?= docker

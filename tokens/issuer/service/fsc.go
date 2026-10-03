@@ -16,8 +16,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/endpoint"
 	viewregistry "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/LFDT-Panurus/panurus/token/services/ttx"
-	"github.com/LFDT-Panurus/panurus/token/token"
+	tok "github.com/LFDT-Panurus/panurus/token/token"
+
+	"github.com/hyperledger/fabric-samples/token-sdk/common/views"
 )
 
 var logger = logging.MustGetLogger() // TODO
@@ -46,8 +49,10 @@ var (
 )
 
 // Issue issues an amount of tokens to a wallet. It connects to the other node, prepares the transaction,
-// gets it approved by the auditor and sends it to the blockchain for endorsement and commit.
-func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity uint64, recipient string, recipientNode string, message string) (string, error) {
+// gets it approved by the auditor and sends it to the blockchain for endorsement and commit. A nil tmsID
+// selects the node's default TMS; pass one explicitly to issue on a non-default TMS, e.g. seeding the
+// counterparty side of a cross-network swap.
+func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity uint64, recipient string, recipientNode string, message string, tmsID *token.TMSID) (string, error) {
 	logger.Infof("going to issue %d %s to [%s] on [%s] with message [%s]", quantity, tokenType, recipient, recipientNode, message)
 	mgr, err := viewregistry.GetManager(f.node)
 	if err != nil {
@@ -60,6 +65,7 @@ func (f FabricSmartClient) Issue(ctx context.Context, tokenType string, quantity
 			Recipient:     recipient,
 			RecipientNode: recipientNode,
 			Message:       message,
+			TMSID:         tmsID,
 		},
 	})
 	if err != nil {
@@ -90,6 +96,8 @@ type IssueCash struct {
 	Message string
 	// Auditor is the optional auditor to sign the transaction
 	Auditor string
+	// TMSID identifies the TMS to issue on. Nil selects the node's default TMS.
+	TMSID *token.TMSID
 }
 
 type IssueCashView struct {
@@ -98,7 +106,7 @@ type IssueCashView struct {
 
 func (v *IssueCashView) Call(vctx view.Context) (interface{}, error) {
 	ctx := vctx.Context()
-	wallet := ttx.MyIssuerWallet(vctx)
+	wallet := ttx.MyIssuerWallet(vctx, views.ServiceOpts(v.TMSID)...)
 	if wallet == nil {
 		return "", fmt.Errorf("issuer wallet not found")
 	}
@@ -112,7 +120,7 @@ func (v *IssueCashView) Call(vctx view.Context) (interface{}, error) {
 
 	// As a first step operation, the issuer contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
-	recipient, err := ttx.RequestRecipientIdentity(vctx, rec)
+	recipient, err := ttx.RequestRecipientIdentity(vctx, rec, views.ServiceOpts(v.TMSID)...)
 	if err != nil {
 		return "", fmt.Errorf("failed getting recipient identity from %s: %w", v.RecipientNode, err)
 	}
@@ -120,7 +128,7 @@ func (v *IssueCashView) Call(vctx view.Context) (interface{}, error) {
 	tx, err := ttx.NewTransaction(
 		vctx,
 		nil, // default signer
-		ttx.WithAuditor(view.Identity(v.Auditor)),
+		views.TxOpts(v.TMSID, ttx.WithAuditor(view.Identity(v.Auditor)))...,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "failed creating transaction")
@@ -139,7 +147,7 @@ func (v *IssueCashView) Call(vctx view.Context) (interface{}, error) {
 		ctx,
 		wallet,
 		recipient,
-		token.Type(v.TokenType),
+		tok.Type(v.TokenType),
 		v.Quantity,
 	); err != nil {
 		return "", errors.Wrap(err, "failed adding new issued token")

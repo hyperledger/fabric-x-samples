@@ -29,10 +29,12 @@ The **Token SDK Sample** demonstrates how to:
     - [Setup Fabric-X](#setup-fabric-x)
   - [Option 2: Fabric-X test container](#option-2-fabric-x-test-container)
   - [Option 3: Fabric v3](#option-3-fabric-v3)
+  - [Option 4: Fabric v3 + EVM (cross-chain swap)](#option-4-fabric-v3--evm-cross-chain-swap)
   - [Interacting with the Application](#interacting-with-the-application)
   - [Example: Issue tokens](#example-issue-tokens)
   - [Example: Transfer tokens](#example-transfer-tokens)
   - [Example: HTLC lock, claim and reclaim](#example-htlc-lock-claim-and-reclaim)
+  - [Example: HTLC swap between Fabric and EVM](#example-htlc-swap-between-fabric-and-evm)
   - [Teardown and cleanup](#teardown-and-cleanup)
   - [Development](#development)
   - [Debug mode](#debug-mode)
@@ -235,6 +237,37 @@ Start the Fabric network, create the namespace (chaincode), and start the applic
 make start
 ```
 
+## Option 4: Fabric v3 + EVM (cross-chain swap)
+
+This option runs the same Fabric v3 network as Option 3, alongside a standalone, local
+[anvil](https://book.getfoundry.sh/anvil/) chain: `owner1` (alice) and `owner2` (dan) each hold a
+wallet on both and can trade across them with an HTLC - see
+[Example: HTLC swap between Fabric and EVM](#example-htlc-swap-between-fabric-and-evm). It is a
+second, independent chain for the sample to demonstrate a real cross-chain swap, not the
+[`evm/`](../evm) Fabric-X-to-EVM gateway sample elsewhere in this repository.
+
+You'll additionally need the [Foundry](https://book.getfoundry.sh/getting-started/installation)
+toolchain (`anvil`, `forge`, `cast`) on your `$PATH`.
+
+Clean up any previous state and set up the classic Fabric material, same as Option 3:
+
+```shell
+make teardown
+make clean
+export PLATFORM=evm
+make setup
+```
+
+Start the Fabric network, deploy the EVM token contracts to a fresh anvil chain, and start the
+application services:
+
+```shell
+make start
+```
+
+`make start` prints the deployed `TokenState` and `EndorsementVerifier` contract addresses once the
+EVM leg is ready. `anvil`'s own log lives at `conf-evm/evm/anvil.log`; `make teardown` stops it.
+
 ## Interacting with the Application
 
 All services run as Docker containers and expose REST APIs.
@@ -330,6 +363,57 @@ If you already hold a secret, pass its SHA-256 digest as `hash` in the lock requ
 SECRET=$(openssl rand -base64 24)   # the pre-image
 HASH=$(printf '%s' "$SECRET" | openssl base64 -d -A | openssl dgst -sha256 -binary | openssl base64 -A)
 ```
+
+## Example: HTLC swap between Fabric and EVM
+
+On [Option 4](#option-4-fabric-v3--evm-cross-chain-swap), `owner1` and `owner2` each declare a
+second token management service, `evmtms`, settled on the anvil chain rather than Fabric. `alice`
+and `dan` hold a wallet on both, so they can swap `TOK` (Fabric) for `ETOK` (EVM) atomically with
+the same HTLC primitive, just by passing an explicit `tmsId` on each call: `alice` locks on Fabric,
+`dan` locks on EVM, and each claims the other's lock by revealing the same pre-image. The full
+flow, including the counterparty-never-shows-up path, is a runnable script:
+[`scripts/test_swap.sh`](scripts/test_swap.sh).
+
+```bash
+MYTMS='{"network": "default", "channel": "mychannel", "namespace": "token_namespace"}'
+EVMTMS='{"network": "evm", "channel": "", "namespace": "evm_namespace"}'
+SECRET=$(openssl rand -base64 24)
+HASH=$(printf '%s' "$SECRET" | openssl base64 -d -A | openssl dgst -sha256 -binary | openssl base64 -A)
+
+# alice locks TOK on Fabric for dan, with the longer deadline (see note below)
+curl http://localhost:9500/owner/accounts/alice/lock -d '{
+    "amount": {"code": "TOK", "value": 20},
+    "counterparty": {"node": "owner2", "account": "dan"},
+    "deadline": 120,
+    "hash": "'"$HASH"'",
+    "tmsId": '"$MYTMS"'
+}'
+
+# dan locks ETOK on EVM for alice, with the shorter deadline
+curl http://localhost:9600/owner/accounts/dan/lock -d '{
+    "amount": {"code": "ETOK", "value": 20},
+    "counterparty": {"node": "owner1", "account": "alice"},
+    "deadline": 60,
+    "hash": "'"$HASH"'",
+    "tmsId": '"$EVMTMS"'
+}'
+
+# alice claims dan's EVM lock, revealing the pre-image on chain
+curl http://localhost:9500/owner/accounts/alice/claim -d '{"preimage": "'"$SECRET"'", "tmsId": '"$EVMTMS"'}'
+
+# dan claims alice's Fabric lock with the now-public pre-image
+curl http://localhost:9600/owner/accounts/dan/claim -d '{"preimage": "'"$SECRET"'", "tmsId": '"$MYTMS"'}'
+
+# balances, scoped to each TMS with the balance endpoint's network/channel/namespace query params
+curl "http://localhost:9500/owner/accounts/alice?code=ETOK&network=evm&channel=&namespace=evm_namespace" | jq
+curl "http://localhost:9600/owner/accounts/dan?code=TOK&network=default&channel=mychannel&namespace=token_namespace" | jq
+```
+
+The two deadlines are deliberately asymmetric: the initiator's lock (alice, on Fabric) outlasts the
+responder's (dan, on EVM). If alice reveals the pre-image right before dan's deadline, dan still
+needs time to claim her lock before her own, longer deadline would let her reclaim it too - walking
+away with both sides of the swap. A shorter responder deadline is the standard HTLC safeguard
+against that.
 
 ## Teardown and cleanup
 

@@ -98,7 +98,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TransferRequest"
+              $ref: "#/components/schemas/IssueRequest"
       operationId: issue
       summary: Issue tokens of any kind to an account
 
@@ -132,6 +132,9 @@ paths:
       parameters:
         - $ref: "#/components/parameters/id"
         - $ref: "#/components/parameters/code"
+        - $ref: "#/components/parameters/network"
+        - $ref: "#/components/parameters/channel"
+        - $ref: "#/components/parameters/namespace"
       responses:
         "200":
           $ref: "#/components/responses/AccountSuccess"
@@ -598,9 +601,27 @@ components:
         status: Confirmed
         message: ""
 
+    # Issuer
+    IssueRequest:
+      description: Instructions to issue tokens to an account
+      required:
+        - counterparty
+        - amount
+      type: object
+      properties:
+        amount:
+          $ref: "#/components/schemas/Amount"
+        counterparty:
+          $ref: "#/components/schemas/Counterparty"
+        message:
+          description: optional message that will be sent and stored with the issue transaction
+          type: string
+        tmsId:
+          $ref: "#/components/schemas/TMSID"
+
     # Owner
     TransferRequest:
-      description: Instructions to issue or transfer tokens to an account
+      description: Instructions to transfer tokens to an account
       required:
         - counterparty
         - amount
@@ -739,6 +760,29 @@ components:
       schema:
         example: EURX
         description: The token code to filter on
+        type: string
+    network:
+      name: network
+      in: query
+      schema:
+        example: default
+        description: >-
+          The TMS network to check the balance on. Omit to use the node's default TMS; channel and
+          namespace are read alongside it (each defaulting to "" if not also given).
+        type: string
+    channel:
+      name: channel
+      in: query
+      schema:
+        example: mychannel
+        description: The TMS channel to check the balance on. Only read when network is also given.
+        type: string
+    namespace:
+      name: namespace
+      in: query
+      schema:
+        example: token_namespace
+        description: The TMS namespace to check the balance on. Only read when network is also given.
         type: string
   securitySchemes: {}
   headers: {}

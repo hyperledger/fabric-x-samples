@@ -38,9 +38,11 @@ func (s Server) OwnerAccounts(ctx context.Context, request OwnerAccountsRequestO
 // Get an account and its balances of each token type
 // (GET /owner/accounts/{id})
 func (s Server) OwnerAccount(ctx context.Context, request OwnerAccountRequestObject) (OwnerAccountResponseObject, error) {
+	tmsID := toTMSIDFromParams(request.Params.Network, request.Params.Channel, request.Params.Namespace)
+
 	// balance of one type
 	if request.Params.Code != nil {
-		bal, err := s.fsc.Balance(ctx, string(request.Id), string(*request.Params.Code))
+		bal, err := s.fsc.Balance(ctx, string(request.Id), string(*request.Params.Code), tmsID)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +56,7 @@ func (s Server) OwnerAccount(ctx context.Context, request OwnerAccountRequestObj
 	}
 
 	// all balances
-	bals, err := s.fsc.Balances(ctx, string(request.Id))
+	bals, err := s.fsc.Balances(ctx, string(request.Id), tmsID)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +149,24 @@ func toTMSID(id *TMSID) *token.TMSID {
 		return nil
 	}
 	return &token.TMSID{Network: id.Network, Channel: id.Channel, Namespace: id.Namespace}
+}
+
+// toTMSIDFromParams builds a TMS identifier out of the balance endpoint's flat network/channel/namespace
+// query parameters (a query string has no clean way to carry the nested TmsId object the other
+// endpoints take in their JSON body). A nil network selects the node's default TMS; channel and
+// namespace each default to "" if not also given.
+func toTMSIDFromParams(network, channel, namespace *string) *token.TMSID {
+	if network == nil {
+		return nil
+	}
+	id := &token.TMSID{Network: *network}
+	if channel != nil {
+		id.Channel = *channel
+	}
+	if namespace != nil {
+		id.Namespace = *namespace
+	}
+	return id
 }
 
 // toDeadline converts seconds to a duration. Zero would silently select the Token SDK default (one hour),

@@ -1,0 +1,146 @@
+logging:
+  spec: info
+  format: "%{color}%{time:15:04:05.000} [%{module}] %{shortfunc} %{level:.4s}%{color:reset} %{message}"
+
+fsc:
+  id: owner1 # CORE_FSC_ID
+  identity:
+    cert:
+      file: ./keys/node.crt
+    key:
+      file: ./keys/node.key
+  p2p:
+    listenAddress: /ip4/0.0.0.0/tcp/9501 # CORE_P2P_LISTENADDRESS
+    type: websocket
+    opts:
+      routing:
+        path: ./routing-config.yaml
+  persistences:
+    default:
+      type: sqlite
+      opts:
+        dataSource: file:./data/fts.sqlite # CORE_FSC_PERSISTENCES_OPTS_DATASOURCE
+  endpoint:
+    resolvers:
+      - name: issuer
+        identity:
+          id: issuer
+          path: ./keys/nodes/issuer.crt
+        addresses:
+          P2P: issuer.example.com:9101
+      - name: endorser1
+        identity:
+          id: endorser1
+          path: ./keys/nodes/endorser1.crt
+        addresses:
+          P2P: endorser1.example.com:9301
+      - name: endorser2
+        identity:
+          id: endorser2
+          path: ./keys/nodes/endorser2.crt
+        addresses:
+          P2P: endorser2.example.com:9401
+      - name: owner1
+        identity:
+          id: owner1
+          path: ./keys/nodes/owner1.crt
+        addresses:
+          P2P: owner1.example.com:9501
+      - name: owner2
+        identity:
+          id: owner2
+          path: ./keys/nodes/owner2.crt
+        addresses:
+          P2P: owner2.example.com:9601
+
+fabric:
+  enabled: true
+  default:
+    msps:
+      - id: user
+        mspType: bccsp
+        mspID: Org1MSP
+        path: ./keys/fabric/user
+      - id: endorser1-endorsing
+        mspType: bccsp
+        mspID: Org1MSP
+        path: ./keys/fabric/endorser1
+      - id: endorser2-endorsing
+        mspType: bccsp
+        mspID: Org2MSP
+        path: ./keys/fabric/endorser2
+    tls:
+      enabled: true
+      rootCAs:
+        files:
+          - ./keys/fabric/peer-tls-ca.crt
+    peers:
+      - address: peer0.org1.example.com:7051
+    channels:
+      - name: mychannel
+        default: true
+
+token:
+  enabled: true
+  tms:
+    mytms:
+      network: default
+      channel: mychannel
+      namespace: token_namespace
+      driver: zkatdlog
+      wallets:
+        owners:
+          - id: alice
+            path: ./keys/wallet/alice/msp
+          - id: bob
+            path: ./keys/wallet/bob/msp
+      services:
+        network:
+          fabric:
+            fsc_endorsement:
+              endorser: false
+              id: endorser
+              policy:
+                type: all
+              endorsers:
+                - endorser1
+                - endorser2
+
+    # evmtms is the EVM leg of the swap sample: alice locks TOK here for dan's Fabric wallet
+    # (mytms, on owner2) and claims dan's EVM-side token here in return. Rendered from this
+    # template by scripts/setup_evm.sh; see conf-evm/issuer/core.yaml.tmpl for the ${EVM_*}
+    # placeholders' source.
+    evmtms:
+      network: evm
+      channel: ""
+      namespace: evm_namespace
+      driver: zkatdlog
+      wallets:
+        owners:
+          - id: alice
+            path: ./keys/wallet/alice/msp
+      services:
+        network:
+          evm:
+            endpoint: "${EVM_ENDPOINT}"
+            chainID: ${EVM_CHAIN_ID}
+            contracts:
+              tokenState: "${EVM_TOKEN_STATE_ADDRESS}"
+              endorsementVerifier: "${EVM_VERIFIER_ADDRESS}"
+            finality:
+              blockTag: latest
+              timeout: 60s
+            submitter:
+              keystore: ./keys/evm/submitter.key
+              address: "${EVM_SUBMITTER_OWNER1_ADDRESS}"
+            endorsement:
+              threshold: ${EVM_THRESHOLD}
+              allowlist:
+                - issuer
+                - owner1
+                - owner2
+              endorsers:
+                - address: "${EVM_ENDORSER1_ADDRESS}"
+                  fscIdentity: endorser1
+                - address: "${EVM_ENDORSER2_ADDRESS}"
+                  fscIdentity: endorser2

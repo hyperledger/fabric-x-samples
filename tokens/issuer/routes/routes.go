@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/LFDT-Panurus/panurus/token"
 	"github.com/hyperledger/fabric-samples/token-sdk/issuer/service"
 )
 
@@ -39,6 +40,7 @@ func (s Server) Issue(ctx context.Context, request IssueRequestObject) (IssueRes
 		request.Body.Counterparty.Account,
 		request.Body.Counterparty.Node,
 		message,
+		toTMSID(request.Body.TmsId),
 	)
 	if err != nil {
 		return nil, err
@@ -47,6 +49,14 @@ func (s Server) Issue(ctx context.Context, request IssueRequestObject) (IssueRes
 		Message: "ok",
 		Payload: res,
 	}}, err
+}
+
+// toTMSID converts the optional TMS identifier of a request. A nil result selects the node's default TMS.
+func toTMSID(id *TMSID) *token.TMSID {
+	if id == nil {
+		return nil
+	}
+	return &token.TMSID{Network: id.Network, Channel: id.Channel, Namespace: id.Namespace}
 }
 
 // Returns 200 if the service is healthy

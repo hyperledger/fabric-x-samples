@@ -10,6 +10,8 @@ ifeq ($(PLATFORM),fabricx)
 include ./fabricx_ansible.mk
 else ifeq ($(PLATFORM),xdev)
 include ./fabricx_dev.mk
+else ifeq ($(PLATFORM),evm)
+include ./evm.mk
 else
 include ./fabric3.mk
 endif
@@ -38,6 +40,13 @@ teardown: teardown-app teardown-fabric
 .PHONY: test
 test:
 	@./scripts/test.sh
+
+# Test the HTLC swap between the Fabric and EVM legs of PLATFORM=evm. Brings its own network up and
+# down (PLATFORM=evm always, regardless of the environment) - run it on a clean checkout, not
+# alongside another `make start`.
+.PHONY: test-swap
+test-swap:
+	@./scripts/test_swap.sh
 
 # Stop Fabric and the token network.
 .PHONY: stop

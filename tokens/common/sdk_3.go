@@ -1,4 +1,4 @@
-//go:build !fabricx
+//go:build !fabricx && !evm
 
 /*
 Copyright IBM Corp. All Rights Reserved.

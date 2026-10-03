@@ -9,6 +9,9 @@ x-service-template: &service-template
     - "committer-sidecar:host-gateway"
     - "committer-queryservice:host-gateway"
     - "orderer.example.com:host-gateway"
+    # Resolves to the host running scripts/deploy_evm.sh's anvil instance; unused outside
+    # PLATFORM=evm, harmless everywhere else.
+    - "anvil:host-gateway"
   networks:
     - test
 
