@@ -24,6 +24,7 @@ jobs:
       matrix:
         include:
           - platform: "fabricx"
+            htlc_test: "1"
           - platform: "fabric3"
       fail-fast: false
     steps:
@@ -58,5 +59,6 @@ jobs:
       - name: Run samples tests on ${{ matrix.platform }}
         env:
           PLATFORM: ${{ matrix.platform }}
+          HTLC_TEST: ${{ matrix.htlc_test }}
         working-directory: tokens
         run: make install-prerequisites test
