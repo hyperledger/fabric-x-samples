@@ -31,12 +31,12 @@ for node in "${nodes[@]}"; do
 done
 
 # Endorser (see: https://github.com/hyperledger-labs/fabric-token-sdk/blob/main/docs/core-token.md?plain=1#L109).
-dir="${CONF_ROOT}/endorser1/keys/fabric" 
+dir="${CONF_ROOT}/endorser1/keys/fabric"
 mkdir -p "$dir"
 cp -r "${CRYPTO_DIR}/peerOrganizations/org1.example.com/users/endorser@org1.example.com/msp" "${dir}/endorser"
 cp -r "${CRYPTO_DIR}/peerOrganizations/org1.example.com/users/channel_admin@org1.example.com/msp" "${dir}/admin"
 
-dir="${CONF_ROOT}/endorser2/keys/fabric" 
+dir="${CONF_ROOT}/endorser2/keys/fabric"
 mkdir -p "$dir"
 cp -r "${CRYPTO_DIR}/peerOrganizations/org1.example.com/users/endorser@org1.example.com/msp" "${dir}/endorser"
 cp -r "${CRYPTO_DIR}/peerOrganizations/org1.example.com/users/channel_admin@org1.example.com/msp" "${dir}/admin"

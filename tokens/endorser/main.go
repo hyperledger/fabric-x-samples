@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Simple web server
-	sh := routes.NewStrictHandler(routes.NewServer(service.NewFSC(fsc)), []routes.StrictMiddlewareFunc{})
+	sh := routes.NewStrictHandler(routes.NewServer(service.NewFSC(fsc, *pth)), []routes.StrictMiddlewareFunc{})
 	h := common.WithAnyCORS(routes.HandlerFromMux(sh, http.NewServeMux()))
 	s := &http.Server{
 		Handler: h,
