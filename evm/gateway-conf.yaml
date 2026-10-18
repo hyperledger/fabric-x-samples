@@ -14,7 +14,7 @@ network:
   protocol: fabric-x
   channel: mychannel
   namespace: basic
-  ns-version: "1.0"
+  ns-version: "0"
   chain-id: 4011
 
 # The committer this process keeps in sync with.

@@ -11,7 +11,7 @@ name: fabric-x-evm
 
 services:
   gateway:
-    image: ghcr.io/hyperledger/fabric-x-evm:0.2.0
+    image: ghcr.io/hyperledger/fabric-x-evm:0.2.1
     restart: unless-stopped
     container_name: gateway
     user: "${UID:-1000}:${GID:-1000}"
@@ -43,7 +43,7 @@ services:
         condition: service_healthy
 
   endorser-org2:
-    image: ghcr.io/hyperledger/fabric-x-evm:0.2.0
+    image: ghcr.io/hyperledger/fabric-x-evm:0.2.1
     restart: unless-stopped
     container_name: endorser-org2
     user: "${UID:-1000}:${GID:-1000}"

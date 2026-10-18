@@ -12,6 +12,22 @@ control, and enterprise-grade consensus.
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) (`cast`) — for the demo deploy/transfer commands
 - [MetaMask](https://metamask.io/) browser extension _(optional, for the wallet walkthrough)_
 
+Docker should have access to 2 or more CPUs with 4 GB of RAM at minimum (8 GB recommended).
+
+## Just want a local test node?
+
+If you only need an Ethereum-compatible RPC endpoint to develop or test against
+(like Hardhat Network or Anvil), you don't need the full network below. One
+container is enough:
+
+```shell
+docker run --rm -p 8545:8545 ghcr.io/hyperledger/fabric-x-evm:0.2.1 testnode
+```
+
+The node is then available at `http://localhost:8545` (chain ID `31337`) with
+the standard Hardhat test accounts prefunded, so Foundry, Hardhat, ethers and
+similar tools work out of the box.
+
 ## Quick start
 
 Stand up a full Fabric-X EVM network with a block explorer in two commands:

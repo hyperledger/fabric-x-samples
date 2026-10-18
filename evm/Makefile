@@ -87,10 +87,11 @@ AMOUNT         ?= 100
 
 .PHONY: deploy
 deploy:
-	@CONTRACT=$$(cast send --rpc-url fabricx --private-key $(ADMIN_KEY) \
+	@OUT=$$(cast send --rpc-url fabricx --private-key $(ADMIN_KEY) \
 	  --create "$$(cat erc20.bin)" \
-	  'constructor(string,string,uint256)' '$(NAME)' '$(SYMBOL)' '$(SUPPLY)000000000000000000' \
-	  | awk '/contractAddress/ {print $$2}') && \
+	  'constructor(string,string,uint256)' '$(NAME)' '$(SYMBOL)' '$(SUPPLY)000000000000000000') && \
+	  CONTRACT=$$(echo "$$OUT" | awk '/contractAddress/ {print $$2}') && \
+	  test -n "$$CONTRACT" || { echo "deploy failed: no contract address in receipt"; exit 1; } && \
 	  echo $$CONTRACT > .token-address && \
 	  printf '\nDeployed %s (%s): %s/address/%s\n\n' "$(NAME)" "$(SYMBOL)" "$(EXPLORER)" "$$CONTRACT"
 
@@ -100,10 +101,10 @@ CONTRACT ?= $(shell cat .token-address 2>/dev/null)
 transfer:
 	@test -n "$(TO)" || (echo "Usage: make transfer TO=0x... [AMOUNT=100] [CONTRACT=0x...]"; exit 1)
 	@test -n "$(CONTRACT)" || (echo "No contract address. Run 'make deploy' first or pass CONTRACT=0x..."; exit 1)
-	@TX=$$(cast send --rpc-url fabricx --private-key $(ADMIN_KEY) \
+	@OUT=$$(cast send --rpc-url fabricx --private-key $(ADMIN_KEY) \
 	    $(CONTRACT) "transfer(address,uint256)" \
-	    $(TO) '$(AMOUNT)000000000000000000' \
-	    | awk '/^transactionHash/ {print $$2}') && \
+	    $(TO) '$(AMOUNT)000000000000000000') && \
+	  TX=$$(echo "$$OUT" | awk '/^transactionHash/ {print $$2}') && \
 	  printf '\nTransferred %s tokens to %s: %s/tx/%s\n\n' "$(AMOUNT)" "$(TO)" "$(EXPLORER)" "$$TX"
 
 # Verify the deployed source on the explorer, unlocking the Read/Write Contract
