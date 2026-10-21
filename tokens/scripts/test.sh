@@ -91,11 +91,15 @@ function curl_with_retry() {
     local attempt=1
 
     while true; do
+        local exit_code
+        # An `if` whose condition is false, with no branch taken, resets $? to 0 -- so the
+        # failing exit code has to be captured inside an explicit `else`, not read after `fi`.
         if curl -f -X "$@"; then
             return 0
+        else
+            exit_code=$?
         fi
 
-        local exit_code=$?
         if (( attempt >= max_attempts )); then
             echo "Error: curl failed after ${attempt} attempts: curl -X $*" >&2
             return "$exit_code"
