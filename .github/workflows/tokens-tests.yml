@@ -46,13 +46,17 @@ jobs:
         if: ${{ matrix.platform == 'fabricx' }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.x"
+          # ansible-core supports controller Python 3.12-3.14; "3.x" now resolves to 3.15,
+          # which ansible-core 2.21 crashes on at import time.
+          python-version: "3.13"
 
       - name: Install Ansible
         if: ${{ matrix.platform == 'fabricx' }}
         run: |
           python -m pip install --upgrade pip
-          pip install ansible ansible-core
+          # Pinned to the versions the fabricx flow is verified against; unpinned, a new
+          # release can break CI on its own (as ansible-core 2.21's stricter templating did).
+          pip install ansible==14.5.0 ansible-core==2.21.5
           ansible --version
 
       - name: Run samples tests on ${{ matrix.platform }}
