@@ -6,6 +6,9 @@
 - name: Create necessary container networks
   ansible.builtin.import_playbook: hyperledger.fabricx.create_container_networks
 
+- name: Start Hyperledger Fabric-X Committer Postgres
+  ansible.builtin.import_playbook: hyperledger.fabricx.postgres.start
+
 - name: Start Hyperledger Fabric-X Orderer
   ansible.builtin.import_playbook: hyperledger.fabricx.orderer.start
 

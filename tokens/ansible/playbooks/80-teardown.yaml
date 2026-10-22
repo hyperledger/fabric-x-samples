@@ -10,5 +10,8 @@
 - name: Teardown Hyperledger Fabric-X Orderers
   ansible.builtin.import_playbook: hyperledger.fabricx.orderer.teardown
 
+- name: Teardown Hyperledger Fabric-X Committer Postgres
+  ansible.builtin.import_playbook: hyperledger.fabricx.postgres.teardown
+
 - name: Remove container networks
   ansible.builtin.import_playbook: hyperledger.fabricx.remove_container_networks

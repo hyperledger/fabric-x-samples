@@ -29,3 +29,19 @@ configtxgen_artifacts_dir: "{{ config_build_dir }}/configtxgen-artifacts"
 # =========================
 channel_id: arma
 actual_host: "{{ 'localhost' if ansible_connection == 'local' else ansible_host }}"
+
+# fxconfig's config/transfer task defaults these three addresses to actual_host (always
+# "localhost", since ansible_connection is local here) - correct for ansible's own tasks running
+# on the control node against docker's published ports, but wrong for the fxconfig CLI itself,
+# which runs inside a *separate* transient container on the fabric_test bridge network (every
+# load_generators/fxconfig host sets container_network: fabric_test). From there "localhost" is
+# that transient container's own loopback, not the host machine - connection refused. Overriding
+# with the real container names, the same way the pre-0.9.16 role's --endpoint argument always did.
+#
+# These must stay plain strings (matching the inventory's orderer-router-1 / committer-sidecar /
+# committer-query-service hosts and ports): the collection resolves hosts by walking every host's
+# vars (groups['all'] | map('extract', hostvars)), and newer ansible-core (2.21; 2.17 tolerated
+# it) fails that walk with "'hostvars' is undefined" if a var defined here references hostvars.
+fxconfig_orderer_address: "orderer-router-1:7050"
+fxconfig_committer_sidecar_address: "committer-sidecar:4001"
+fxconfig_committer_query_service_address: "committer-query-service:7001"
