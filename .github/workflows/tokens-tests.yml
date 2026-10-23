@@ -9,10 +9,10 @@ name: Token Sample Tests
 on:
   push:
     branches: [ "main" ]
-    paths: [ "tokens/**" ]
+    paths: [ "tokens/**", "devnet/**" ]
   pull_request:
     branches: [ "main" ]
-    paths: [ "tokens/**" ]
+    paths: [ "tokens/**", "devnet/**" ]
   workflow_dispatch:
 
 
@@ -25,6 +25,8 @@ jobs:
         include:
           - platform: "fabricx"
           - platform: "fabric3"
+          - platform: "xdev"
+            htlc_test: "1"
       fail-fast: false
     steps:
       - name: Checkout code
@@ -58,5 +60,6 @@ jobs:
       - name: Run samples tests on ${{ matrix.platform }}
         env:
           PLATFORM: ${{ matrix.platform }}
+          HTLC_TEST: ${{ matrix.htlc_test }}
         working-directory: tokens
         run: make install-prerequisites test
