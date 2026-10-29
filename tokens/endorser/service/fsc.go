@@ -32,7 +32,7 @@ func NewFSC(node *node.Node) *FabricSmartClient {
 //
 // It deploys every TMS in core.yaml with the public parameters read from that TMS's
 // publicParameters.path, rather than calling the deployer's DeployTMSs. DeployTMSs (still the
-// case in Panurus v0.24.0) fetches the parameters to deploy from the ledger itself - the same
+// case in Panurus v0.26.0) fetches the parameters to deploy from the ledger itself - the same
 // reader used to load an already-initialized TMS - so on a fresh namespace it reads back
 // nothing and commits an empty value.
 //

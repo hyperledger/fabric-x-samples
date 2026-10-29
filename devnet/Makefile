@@ -2,7 +2,7 @@
 FABRICX_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # Container images
-TOOLS_IMAGE          ?= ghcr.io/hyperledger/fabric-x-tools:1.0.1
+TOOLS_IMAGE          ?= ghcr.io/hyperledger/fabric-x-tools:1.0.3
 ORDERER_IMAGE        ?= ghcr.io/hyperledger/fabric-x-orderer:1.0.6
 
 UID := $(shell id -u)
@@ -109,9 +109,11 @@ start-both:
 start-dev:
 	@if [ ! -d "$(FABRICX_DIR)/crypto" ]; then echo "Error: crypto directory not found — run 'make init' first."; exit 1; fi
 	@if nc -z localhost 7050 2>/dev/null; then echo "Error: port 7050 is already in use."; exit 1; fi
-	@$(COMPOSE) -f $(FABRICX_DIR)/compose.test-committer.yaml up -d
 	@echo "Waiting for test committer to be ready..."
-	@while ! nc -z localhost 7001 2>/dev/null; do sleep 1; done
+	@# --wait blocks on the container healthcheck, which probes the query service and the built-in
+	@# orderer from inside the container: probing the published ports from the host is not enough,
+	@# as some Docker runtimes' port forwarders accept a connection before the container listens.
+	@$(COMPOSE) -f $(FABRICX_DIR)/compose.test-committer.yaml up -d --wait
 
 .PHONY: stop-dev
 stop-dev: stop-explorer

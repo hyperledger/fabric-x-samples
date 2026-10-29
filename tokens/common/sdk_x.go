@@ -25,9 +25,9 @@ import (
 	"go.uber.org/dig"
 )
 
-// extraNetworkDrivers are network drivers registered next to the Fabric-X one. Empty unless the
-// binary is built with the evm tag too (PLATFORM=xevm, see sdk_x_evm.go).
-var extraNetworkDrivers []any
+// extraNetworkDrivers register network drivers next to the Fabric-X one. Empty unless the binary
+// is built with the evm tag too (PLATFORM=xevm, see sdk_x_evm.go).
+var extraNetworkDrivers []func(common.Container) error
 
 func NewSDK(registry services.Registry) *SDK {
 	return &SDK{SDK: tokensdk.NewFrom(fabricxsdk.NewSDK(registry))}
@@ -48,8 +48,8 @@ func (p *SDK) Install() error {
 		p.Container().Provide(pp.NewPublicParametersService),
 		p.Container().Provide(digutils.Identity[*pp.PublicParametersService](), dig.As(new(pp.Loader))),
 	)
-	for _, d := range extraNetworkDrivers {
-		err = errors.Join(err, p.Container().Provide(d, dig.Group("network-drivers")))
+	for _, provide := range extraNetworkDrivers {
+		err = errors.Join(err, provide(p.Container()))
 	}
 	if err != nil {
 		return err

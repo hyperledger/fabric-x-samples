@@ -25,7 +25,7 @@ test-committer runs it internally.
 
 | Orderer | Committer | Tools  | Block Explorer |   PostgreSQL    |
 | :-----: | :-------: | :----: | :------------: | :-------------: |
-| v1.0.6  |  v1.0.5   | v1.0.1 |     v0.1.2     | 18.3-alpine3.23 |
+| v1.0.6  |  v1.0.7   | v1.0.3 |     v0.1.2     | 18.3-alpine3.23 |
 
 ## Quick start
 
@@ -264,7 +264,7 @@ pay close attention to at least the following points.
   throughput, and the verifier has more parallelism and a shorter batch cutoff than its defaults.
   The configs set only what is required or differs from the upstream defaults. For every other
   option, see the committer's commented
-  [config samples](https://github.com/hyperledger/fabric-x-committer/tree/v1.0.5/cmd/config/samples)
-  and [performance tuning guide](https://github.com/hyperledger/fabric-x-committer/blob/v1.0.5/docs/performance-tuning.md),
+  [config samples](https://github.com/hyperledger/fabric-x-committer/tree/v1.0.7/cmd/config/samples)
+  and [performance tuning guide](https://github.com/hyperledger/fabric-x-committer/blob/v1.0.7/docs/performance-tuning.md),
   and the orderer's commented
   [config template](https://github.com/hyperledger/fabric-x-orderer/blob/v1.0.6/config/sample/local_config.yaml).

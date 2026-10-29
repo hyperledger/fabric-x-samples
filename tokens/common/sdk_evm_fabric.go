@@ -17,7 +17,6 @@ import (
 	"github.com/LFDT-Panurus/panurus/token/sdk"
 	tokensdk "github.com/LFDT-Panurus/panurus/token/sdk/dig"
 	"github.com/LFDT-Panurus/panurus/token/services/network/fabric"
-	"github.com/LFDT-Panurus/panurus/x/token/services/network/evm"
 	"go.uber.org/dig"
 )
 
@@ -39,7 +38,7 @@ func (p *SDK) Install() error {
 	err := errors.Join(
 		sdk.RegisterTokenDriverDependencies(p.Container()),
 		p.Container().Provide(fabric.NewGenericDriver, dig.Group("network-drivers")),
-		p.Container().Provide(evm.NewDriver, dig.Group("network-drivers")),
+		provideEVMDriver(p.Container()),
 		p.Container().Provide(dlog.NewTokenDriver, dig.Group("token-drivers")),
 		p.Container().Provide(dlog.NewValidatorDriver, dig.Group("validator-drivers")),
 	)
