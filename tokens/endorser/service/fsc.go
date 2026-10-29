@@ -35,6 +35,9 @@ func NewFSC(node *node.Node) *FabricSmartClient {
 // case in Panurus v0.24.0) fetches the parameters to deploy from the ledger itself - the same
 // reader used to load an already-initialized TMS - so on a fresh namespace it reads back
 // nothing and commits an empty value.
+//
+// TMSs settled on an EVM chain (PLATFORM=xevm's evmtms) are skipped: their public parameters are
+// seeded into the TokenState contract at deployment by scripts/deploy_evm.sh, not committed here.
 func (f FabricSmartClient) Init(ctx context.Context) error {
 	logger.Info("initializing token parameters")
 	dep, err := tms.GetTMSDeployerService(f.node)
@@ -51,6 +54,9 @@ func (f FabricSmartClient) Init(ctx context.Context) error {
 	}
 
 	for _, c := range configs {
+		if c.IsSet("services.network.evm") {
+			continue
+		}
 		path := c.GetString("publicParameters.path")
 		if path == "" {
 			return fmt.Errorf("no publicParameters.path configured for TMS [%s]", c.ID())

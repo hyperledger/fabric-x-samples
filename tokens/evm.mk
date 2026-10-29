@@ -62,9 +62,7 @@ stop-fabric: teardown-fabric
 teardown-fabric:
 	@"$(FABRIC_SAMPLES)/test-network/network.sh" down
 	@$(CONTAINER_CLI) rm -f peer0org1_token_namespace_ccaas peer0org2_token_namespace_ccaas
-	@if [ -f "$(CONF_ROOT)/evm/anvil.pid" ]; then \
-		kill "$$(cat "$(CONF_ROOT)/evm/anvil.pid")" 2>/dev/null || true; \
-	fi
+	@$(CONTAINER_CLI) rm -f anvil >/dev/null 2>&1 || true
 	@for d in "$(CONF_ROOT)"/*/ ; do \
 		rm -rf "$$d/keys/fabric" "$$d/keys/evm" "$$d/data" "$$d/core.yaml"; \
 	done

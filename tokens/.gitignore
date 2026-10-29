@@ -20,5 +20,8 @@ fabric-samples/
 # and conf-evm/evm holds the generated EVM keys and contract-deployment artifacts.
 conf-evm/*/core.yaml
 conf-evm/evm/
+# PLATFORM=xevm: same as conf-evm, on top of devnet.
+conf-xevm/*/core.yaml
+conf-xevm/evm/
 
 __debug_bin*

@@ -20,7 +20,8 @@ function cleanup() {
     local exit_code=$?
     local failed_cmd="$BASH_COMMAND"
     # Command substitutions inherit the ERR trap; only the main shell should tear down the network
-    [[ $BASHPID == "$$" ]] || exit "$exit_code"
+    # BASHPID is bash 4+; macOS ships bash 3.2, where the sh child's PPID is the current (sub)shell.
+    [[ ${BASHPID:-$(exec sh -c 'echo "$PPID"')} == "$$" ]] || exit "$exit_code"
     trap - INT ERR
     set +e
     stop_network
@@ -75,7 +76,7 @@ function wait_until_ready() {
 function wait_for_services() {
     print_section_header "Waiting for services to become ready..."
 
-    if [[ "$PLATFORM" == "fabricx" || "$PLATFORM" == "xdev" ]]; then
+    if [[ "$PLATFORM" == "fabricx" || "$PLATFORM" == "xdev" || "$PLATFORM" == "xevm" ]]; then
         wait_until_ready "endorser" "http://localhost:9300/readyz"
     fi
 
@@ -140,7 +141,7 @@ function run_test() {
 ## Token SDK channel of the default TMS for the selected platform
 function tms_channel() {
     case "$PLATFORM" in
-        fabric3|xdev) echo "mychannel" ;;
+        fabric3|evm|xdev|xevm) echo "mychannel" ;;
         *) echo "arma" ;;
     esac
 }
@@ -263,7 +264,7 @@ run_network
 # # TODO: add an healthcheck within the `docker-compose`
 sleep 10
 wait_for_services
-if [[ "$PLATFORM" == "fabricx" || "$PLATFORM" == "xdev" ]]; then
+if [[ "$PLATFORM" == "fabricx" || "$PLATFORM" == "xdev" || "$PLATFORM" == "xevm" ]]; then
     init_fabricx
 fi
 run_test

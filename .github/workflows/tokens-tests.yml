@@ -68,3 +68,32 @@ jobs:
           HTLC_TEST: ${{ matrix.htlc_test }}
         working-directory: tokens
         run: make install-prerequisites test
+
+  test-swap:
+    name: Token Samples HTLC Swap Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ "evm", "xevm" ]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: tokens/go.mod
+          cache-dependency-path: tokens/go.sum
+
+      # forge and cast build and deploy the EVM contracts; anvil itself runs in a container.
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.1
+
+      - name: Run HTLC swap test on ${{ matrix.platform }}
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        working-directory: tokens
+        run: make install-prerequisites test-swap

@@ -30,6 +30,7 @@ The **Token SDK Sample** demonstrates how to:
   - [Option 2: Fabric-X devnet](#option-2-fabric-x-devnet)
   - [Option 3: Fabric v3](#option-3-fabric-v3)
   - [Option 4: Fabric v3 + EVM (cross-chain swap)](#option-4-fabric-v3--evm-cross-chain-swap)
+  - [Option 5: Fabric-X devnet + EVM (cross-chain swap)](#option-5-fabric-x-devnet--evm-cross-chain-swap)
   - [Interacting with the Application](#interacting-with-the-application)
   - [Example: Issue tokens](#example-issue-tokens)
   - [Example: Transfer tokens](#example-transfer-tokens)
@@ -153,7 +154,9 @@ Use ansible scripts to deploy real distributed networks. For the sake of this sa
 
 ### Requirements
 
-- `python`;
+- `python` 3.12 - 3.14 (ansible-core 2.21 does not run on 3.15; `make install-prerequisites` builds
+  its virtualenv with the newest of `python3.14`, `python3.13`, `python3.12` it finds, or
+  `PYTHON=/path/to/python`);
 - [`ansible`](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) >= **2.16**;
 
 ### Installation
@@ -249,7 +252,9 @@ second, independent chain for the sample to demonstrate a real cross-chain swap,
 [`evm/`](../evm) Fabric-X-to-EVM gateway sample elsewhere in this repository.
 
 You'll additionally need the [Foundry](https://book.getfoundry.sh/getting-started/installation)
-toolchain (`anvil`, `forge`, `cast`) on your `$PATH`.
+toolchain (`forge`, `cast`) on your `$PATH` to build and deploy the contracts; anvil itself runs
+in a container (`ghcr.io/foundry-rs/foundry`, override with `ANVIL_IMAGE`) on the app's docker
+network, where the nodes reach it as `http://anvil:8545`.
 
 Clean up any previous state and set up the classic Fabric material, same as Option 3:
 
@@ -268,7 +273,30 @@ make start
 ```
 
 `make start` prints the deployed `TokenState` and `EndorsementVerifier` contract addresses once the
-EVM leg is ready. `anvil`'s own log lives at `conf-evm/evm/anvil.log`; `make teardown` stops it.
+EVM leg is ready. `docker logs anvil` shows the chain's log; `make teardown` stops it.
+
+## Option 5: Fabric-X devnet + EVM (cross-chain swap)
+
+The Fabric-X counterpart of Option 4: the same [devnet](../devnet) network as Option 2, alongside
+the same anvil chain, so `alice` and `dan` can swap tokens between **Fabric-X** and EVM. The nodes
+are built with both the Fabric-X and the EVM network drivers, and their configuration
+(`conf-xevm/`) is Option 2's plus the `evmtms` from Option 4. Only `endorser1` runs on devnet, so
+the EVM leg requires a single endorsement (`EVM_THRESHOLD=1`).
+
+Requirements are the same as Option 4 (Foundry's `forge` and `cast`). Clean up any previous state,
+then:
+
+```shell
+make teardown
+make clean
+export PLATFORM=xevm
+make setup
+make start
+curl -X POST http://localhost:9300/endorser/init
+```
+
+The swap is the one in [Example: HTLC swap between Fabric and EVM](#example-htlc-swap-between-fabric-and-evm),
+unchanged: devnet's channel is also `mychannel`. `make test-swap` with `PLATFORM=xevm` runs it end to end.
 
 ## Interacting with the Application
 
@@ -281,6 +309,7 @@ They also communicate over P2P websockets as shown below:
 | 9100     | 9101 | Issuer                      |
 | 9300     | 9301 | Endorser 1                  |
 | 9400     | 9401 | Endorser 2 (Fabric v3 only) |
+| 8545     |      | anvil EVM chain (Options 4, 5) |
 | 9500     | 9501 | Owner 1 (alice and bob)     |
 | 9600     | 9601 | Owner 2 (carlos and dan)    |
 
@@ -368,13 +397,14 @@ HASH=$(printf '%s' "$SECRET" | openssl base64 -d -A | openssl dgst -sha256 -bina
 
 ## Example: HTLC swap between Fabric and EVM
 
-On [Option 4](#option-4-fabric-v3--evm-cross-chain-swap), `owner1` and `owner2` each declare a
-second token management service, `evmtms`, settled on the anvil chain rather than Fabric. `alice`
+On [Option 4](#option-4-fabric-v3--evm-cross-chain-swap) (Fabric v3) and
+[Option 5](#option-5-fabric-x-devnet--evm-cross-chain-swap) (Fabric-X), `owner1` and `owner2` each declare a
+second token management service, `evmtms`, settled on the anvil chain rather than Fabric(-X). `alice`
 and `dan` hold a wallet on both, so they can swap `TOK` (Fabric) for `ETOK` (EVM) atomically with
 the same HTLC primitive, just by passing an explicit `tmsId` on each call: `alice` locks on Fabric,
 `dan` locks on EVM, and each claims the other's lock by revealing the same pre-image. The full
 flow, including the counterparty-never-shows-up path, is a runnable script:
-[`scripts/test_swap.sh`](scripts/test_swap.sh).
+[`scripts/test_swap.sh`](scripts/test_swap.sh) (`make test-swap`, `PLATFORM=evm` or `PLATFORM=xevm`).
 
 ```bash
 MYTMS='{"network": "default", "channel": "mychannel", "namespace": "token_namespace"}'

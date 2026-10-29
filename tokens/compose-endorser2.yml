@@ -10,7 +10,6 @@ services:
     extra_hosts:
       - "committer-sidecar:host-gateway"
       - "committer-queryservice:host-gateway"
-      - "anvil:host-gateway"
     networks:
       - test
     hostname: endorser2.example.com

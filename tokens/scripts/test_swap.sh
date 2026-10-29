@@ -6,17 +6,19 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# End-to-end test for the HTLC swap between the Fabric and EVM legs of PLATFORM=evm: alice (owner1)
-# holds TOK on the Fabric TMS (mytms), dan (owner2) holds ETOK on the anvil TMS (evmtms), and they
-# trade across the two with a hash time-locked contract, each claiming the other's lock by
-# revealing the same pre-image. A second scenario exercises the timeout/reclaim path when the
+# End-to-end test for the HTLC swap between the Fabric(-X) and EVM legs of PLATFORM=evm (Fabric v3)
+# or PLATFORM=xevm (Fabric-X devnet): alice (owner1) holds TOK on the Fabric(-X) TMS (mytms), dan
+# (owner2) holds ETOK on the anvil TMS (evmtms), and they trade across the two with a hash
+# time-locked contract, each claiming the other's lock by revealing the same pre-image. A second scenario exercises the timeout/reclaim path when the
 # counterparty never shows up.
 #
-# This is PLATFORM=evm only (it is the only platform with an evmtms); unlike scripts/test.sh it
-# does not take PLATFORM from the environment.
+# evm and xevm are the only platforms with an evmtms; any other PLATFORM in the environment falls
+# back to evm.
 
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
-PLATFORM=evm
+if [[ "${PLATFORM:-}" != "xevm" ]]; then
+    PLATFORM=evm
+fi
 export PLATFORM
 
 ## Print a section title
@@ -31,7 +33,8 @@ function cleanup() {
     local exit_code=$?
     local failed_cmd="$BASH_COMMAND"
     # Command substitutions inherit the ERR trap; only the main shell should tear down the network
-    [[ $BASHPID == "$$" ]] || exit "$exit_code"
+    # BASHPID is bash 4+; macOS ships bash 3.2, where the sh child's PPID is the current (sub)shell.
+    [[ ${BASHPID:-$(exec sh -c 'echo "$PPID"')} == "$$" ]] || exit "$exit_code"
     trap - INT ERR
     set +e
     stop_network
@@ -74,6 +77,9 @@ function wait_until_ready() {
 ## Wait for all services needed by the test run
 function wait_for_services() {
     print_section_header "Waiting for services to become ready..."
+    if [[ "$PLATFORM" == "xevm" ]]; then
+        wait_until_ready "endorser" "http://localhost:9300/readyz"
+    fi
     wait_until_ready "issuer" "http://localhost:9100/readyz"
     wait_until_ready "owner1" "http://localhost:9500/readyz"
     wait_until_ready "owner2" "http://localhost:9600/readyz"
@@ -86,11 +92,14 @@ function curl_with_retry() {
     local attempt=1
 
     while true; do
+        local exit_code
+        # An `if` whose condition is false, with no branch taken, resets $? to 0 -- so the
+        # failing exit code has to be captured inside an explicit `else`, not read after `fi`.
         if curl -f -X "$@"; then
             return 0
+        else
+            exit_code=$?
         fi
-
-        local exit_code=$?
         if (( attempt >= max_attempts )); then
             echo "Error: curl failed after ${attempt} attempts: curl -X $*" >&2
             return "$exit_code"
@@ -100,6 +109,13 @@ function curl_with_retry() {
         sleep "$sleep_seconds"
         ((attempt++))
     done
+}
+
+## Commit the Fabric-X public parameters (PLATFORM=xevm only; on Fabric v3 the chaincode install
+## does it). Retried with a long window, see init_fabricx in scripts/test.sh.
+function init_fabricx() {
+    print_section_header "Initializing ${PLATFORM}..."
+    CURL_MAX_ATTEMPTS=30 CURL_RETRY_SLEEP_SECONDS=5 curl_with_retry POST http://localhost:9300/endorser/init
 }
 
 ## Print the balance of an account on one TMS: get_balance <owner port> <account> <code> <tms query string>
@@ -163,7 +179,7 @@ function run_issuance() {
     wait_for_balance 9600 dan ETOK "$EVMTMS_QS" 1000 "issuance credited dan on EVM"
 }
 
-## The successful swap: alice trades TOK (Fabric) for dan's ETOK (EVM)
+## The successful swap: alice trades TOK (Fabric or Fabric-X) for dan's ETOK (EVM)
 function run_successful_swap() {
     print_section_header "Run the successful swap"
 
@@ -249,6 +265,9 @@ trap cleanup INT ERR
 run_network
 sleep 10
 wait_for_services
+if [[ "$PLATFORM" == "xevm" ]]; then
+    init_fabricx
+fi
 run_issuance
 run_successful_swap
 run_timeout_reclaim
