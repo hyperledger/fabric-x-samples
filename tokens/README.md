@@ -27,7 +27,7 @@ The **Token SDK Sample** demonstrates how to:
     - [Requirements](#requirements)
     - [Installation](#installation)
     - [Setup Fabric-X](#setup-fabric-x)
-  - [Option 2: Fabric-X test container](#option-2-fabric-x-test-container)
+  - [Option 2: Fabric-X devnet](#option-2-fabric-x-devnet)
   - [Option 3: Fabric v3](#option-3-fabric-v3)
   - [Option 4: Fabric v3 + EVM (cross-chain swap)](#option-4-fabric-v3--evm-cross-chain-swap)
   - [Interacting with the Application](#interacting-with-the-application)
@@ -196,17 +196,18 @@ make start
 curl -X POST http://localhost:9300/endorser/init
 ```
 
-## Option 2: Fabric-X test container
+## Option 2: Fabric-X devnet
 
-The quickest way for development: a test version of Fabric-X in a single docker container!
-First make sure that the crypto from the ansible network is cleared.
+Runs the sample against [devnet](../devnet), the local Fabric-X network in this repository
+(a 4-party Arma orderer and a committer, all in docker). `make` drives devnet for you; there's
+nothing to start separately. First make sure that the crypto from the ansible network is cleared.
 
 ```shell
 make teardown
 make clean
 ```
 
-Let the scripts know you want to use the test container ('xdev') and generate the necessary crypto material:
+Let the scripts know you want to use devnet ('xdev') and generate the necessary crypto material:
 
 ```shell
 export PLATFORM=xdev

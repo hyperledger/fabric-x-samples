@@ -95,10 +95,11 @@ services:
     volumes:
       - ./swagger.yaml:/usr/share/nginx/html/swagger.yaml
 
-# fabric_test is the name of the fabric-samples test network.
+# fabric_test is the name of the fabric-samples test network (or, for PLATFORM=xdev,
+# TOKENS_NETWORK_NAME is set to devnet's own "fabric-x" network instead - see fabricx_dev.mk).
 # By connecting to it, we can reach the peers at their DNS names
 # (e.g. peer0.org1.example.com).
 networks:
   test:
-    name: fabric_test
+    name: ${TOKENS_NETWORK_NAME:-fabric_test}
     external: true

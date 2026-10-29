@@ -9,10 +9,10 @@ name: Token Sample Tests
 on:
   push:
     branches: [ "main" ]
-    paths: [ "tokens/**" ]
+    paths: [ "tokens/**", "devnet/**" ]
   pull_request:
     branches: [ "main" ]
-    paths: [ "tokens/**" ]
+    paths: [ "tokens/**", "devnet/**" ]
   workflow_dispatch:
 
 
@@ -26,6 +26,8 @@ jobs:
           - platform: "fabricx"
             htlc_test: "1"
           - platform: "fabric3"
+          - platform: "xdev"
+            htlc_test: "1"
       fail-fast: false
     steps:
       - name: Checkout code
