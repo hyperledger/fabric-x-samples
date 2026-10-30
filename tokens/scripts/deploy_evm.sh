@@ -6,9 +6,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# Starts a standalone anvil chain (unless one is already listening) and deploys the Panurus EVM
-# token contracts against it for one TMS: an EndorsementVerifier holding the endorser set and
-# threshold, a shared TokenState implementation, and a TokenState clone seeded with public
+# Starts a standalone anvil chain in a container (unless one is already listening) and deploys the
+# Panurus EVM token contracts against it for one TMS: an EndorsementVerifier holding the endorser
+# set and threshold, a shared TokenState implementation, and a TokenState clone seeded with public
 # parameters v0. This is the EVM-side counterpart of ./gen_crypto.sh's gen_parameters: run once per
 # TMS, before the owner/issuer/endorser nodes start.
 #
@@ -32,27 +32,36 @@ ANVIL_PORT="${ANVIL_PORT:-8545}"
 ANVIL_CHAIN_ID="${ANVIL_CHAIN_ID:-31337}"
 ANVIL_RPC="http://127.0.0.1:${ANVIL_PORT}"
 ANVIL_LOG="${EVM_DIR}/anvil.log"
+ANVIL_IMAGE="${ANVIL_IMAGE:-ghcr.io/foundry-rs/foundry:v1.8.1}"
+# The app containers' network (fabric_test, or devnet's fabric-x for PLATFORM=xevm): anvil joins it
+# so the nodes reach it as http://anvil:8545 by container name.
+ANVIL_NETWORK="${TOKENS_NETWORK_NAME:-fabric_test}"
+CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 WORKDIR="${EVM_DIR}/contracts"
 
-# command -v curl/jq/forge/cast/anvil is assumed available, same as the rest of the sample's scripts.
+# command -v curl/jq/forge/cast is assumed available, same as the rest of the sample's scripts.
 
-## Start anvil in the background if nothing is already listening on ANVIL_PORT. Idempotent, so
+## Start anvil in a container if nothing is already listening on ANVIL_PORT. Idempotent, so
 ## re-running this script against an already-running chain (e.g. during test_swap.sh iteration)
-## does not spawn a second instance.
+## does not spawn a second instance. A container on the app network rather than a host process:
+## reaching the host from a container (host-gateway) is not portable across Docker runtimes
+## (Rancher Desktop, for one, does not route it), container-to-container DNS is.
 start_anvil() {
     if curl -s -o /dev/null "$ANVIL_RPC"; then
         echo "anvil already listening on ${ANVIL_PORT}, reusing it"
         return
     fi
-    # --host 0.0.0.0: the owner/issuer/endorser nodes run in containers and reach anvil through
-    # the "anvil:host-gateway" extra_hosts entry (see compose.yml), which resolves to the host's
-    # network interface, not its loopback - binding to 127.0.0.1 only would make that unreachable.
-    anvil --host 0.0.0.0 --port "$ANVIL_PORT" --chain-id "$ANVIL_CHAIN_ID" >"$ANVIL_LOG" 2>&1 &
-    echo $! >"${EVM_DIR}/anvil.pid"
+    "$CONTAINER_CLI" rm -f anvil >/dev/null 2>&1 || true
+    "$CONTAINER_CLI" run -d --name anvil --network "$ANVIL_NETWORK" -p "${ANVIL_PORT}:8545" \
+        --entrypoint anvil "$ANVIL_IMAGE" --host 0.0.0.0 --port 8545 --chain-id "$ANVIL_CHAIN_ID" >/dev/null
     for _ in $(seq 1 30); do
-        curl -s -o /dev/null "$ANVIL_RPC" && return
+        if curl -s -o /dev/null "$ANVIL_RPC"; then
+            "$CONTAINER_CLI" logs anvil >"$ANVIL_LOG" 2>&1
+            return
+        fi
         sleep 1
     done
+    "$CONTAINER_CLI" logs anvil >"$ANVIL_LOG" 2>&1 || true
     echo "Error: anvil did not come up on port ${ANVIL_PORT}; see ${ANVIL_LOG}" >&2
     exit 1
 }

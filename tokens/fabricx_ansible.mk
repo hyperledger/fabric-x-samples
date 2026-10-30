@@ -10,6 +10,11 @@ PROJECT_DIR := $(CURDIR)
 # Ansible
 ANSIBLE_PATH := $(PROJECT_DIR)/ansible
 VENV_DIR := ${ANSIBLE_PATH}/.venv
+# Python the venv is built with. ansible-core 2.21 supports 3.12-3.14 and crashes at import time
+# on 3.15, so prefer a supported interpreter over whatever `python3` happens to be.
+PYTHON ?= $(firstword $(foreach p,python3.14 python3.13 python3.12 python3,$(shell command -v $(p) 2>/dev/null)))
+# The playbooks' docker modules need the venv's `requests`; without this Ansible auto-discovers
+# the system Python instead.
 ANSIBLE_PYTHON_INTERPRETER := ${VENV_DIR}/bin/python
 PLAYBOOK_PATH := $(ANSIBLE_PATH)/playbooks
 TARGET_HOSTS ?= all
@@ -20,6 +25,7 @@ CONF_ROOT=conf
 
 # exported vars
 export ANSIBLE_CONFIG
+export ANSIBLE_PYTHON_INTERPRETER
 export PROJECT_DIR
 export CONF_ROOT
 
@@ -31,7 +37,7 @@ CONTAINER_CLI ?= docker
 # Install the utilities needed to run the components on the targeted remote hosts (e.g. make install-prerequisites).
 .PHONY: install-prerequisites-fabric
 install-prerequisites-fabric:
-	python3 -m venv $(VENV_DIR)
+	$(PYTHON) -m venv $(VENV_DIR)
 	$(VENV_DIR)/bin/python -m pip install --upgrade pip
 	$(VENV_DIR)/bin/python -m pip install -r $(ANSIBLE_PATH)/requirements.txt
 	ansible-galaxy collection install -r $(ANSIBLE_PATH)/requirements.yml

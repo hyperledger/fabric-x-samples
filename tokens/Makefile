@@ -12,6 +12,8 @@ else ifeq ($(PLATFORM),xdev)
 include ./fabricx_dev.mk
 else ifeq ($(PLATFORM),evm)
 include ./evm.mk
+else ifeq ($(PLATFORM),xevm)
+include ./xevm.mk
 else
 include ./fabric3.mk
 endif
@@ -41,9 +43,9 @@ teardown: teardown-app teardown-fabric
 test:
 	@./scripts/test.sh
 
-# Test the HTLC swap between the Fabric and EVM legs of PLATFORM=evm. Brings its own network up and
-# down (PLATFORM=evm always, regardless of the environment) - run it on a clean checkout, not
-# alongside another `make start`.
+# Test the HTLC swap between the Fabric(-X) and EVM legs of PLATFORM=evm (Fabric v3) or
+# PLATFORM=xevm (Fabric-X devnet); any other PLATFORM falls back to evm. Brings its own network up
+# and down - run it on a clean checkout, not alongside another `make start`.
 .PHONY: test-swap
 test-swap:
 	@./scripts/test_swap.sh
