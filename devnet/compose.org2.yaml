@@ -31,7 +31,7 @@ services:
 
   # One-shot DB schema init (required since committer v1.0.5); see compose.yaml.
   committer-org2-init-db:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.7
     pull_policy: missing
     restart: "no"
     user: "${UID:-1000}:${GID:-1000}"
@@ -47,7 +47,7 @@ services:
       - fabric-x
 
   committer-org2-verifier:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.7
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -67,7 +67,7 @@ services:
       - fabric-x
 
   committer-org2-validator:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.7
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -94,7 +94,7 @@ services:
       - fabric-x
 
   committer-org2-coordinator:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.7
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -122,7 +122,7 @@ services:
       - fabric-x
 
   committer-org2-sidecar:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.7
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -161,7 +161,7 @@ services:
       - fabric-x
 
   committer-org2-query-service:
-    image: ghcr.io/hyperledger/fabric-x-committer:1.0.5
+    image: ghcr.io/hyperledger/fabric-x-committer:1.0.7
     pull_policy: missing
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"

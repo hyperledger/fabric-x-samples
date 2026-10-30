@@ -21,7 +21,7 @@ If you only need an Ethereum-compatible RPC endpoint to develop or test against
 container is enough:
 
 ```shell
-docker run --rm -p 8545:8545 ghcr.io/hyperledger/fabric-x-evm:0.2.1 testnode
+docker run --rm -p 8545:8545 ghcr.io/hyperledger/fabric-x-evm:0.2.2 testnode
 ```
 
 The node is then available at `http://localhost:8545` (chain ID `31337`) with
