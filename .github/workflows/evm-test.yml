@@ -1,0 +1,78 @@
+#
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+name: EVM Integration Test
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["evm/**", "devnet/**", ".github/workflows/evm-test.yml"]
+  pull_request:
+    branches: ["main"]
+    paths: ["evm/**", "devnet/**", ".github/workflows/evm-test.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: EVM on Devnet
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: evm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.1
+
+      - name: Init (crypto + genesis block)
+        run: make init
+
+      - name: Start devnet, namespace and EVM gateway
+        run: make start-node
+
+      - name: Deploy ERC-20 contract
+        run: make deploy
+
+      - name: Transfer tokens
+        run: make transfer TO=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 AMOUNT=500
+
+      - name: Verify recipient balance
+        run: |
+          expected=500000000000000000000
+          for i in $(seq 1 10); do
+            balance=$(cast call --rpc-url fabricx "$(cat .token-address)" \
+              "balanceOf(address)(uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 | awk '{print $1}')
+            echo "balance: $balance"
+            [ "$balance" = "$expected" ] && exit 0
+            sleep 2
+          done
+          echo "Unexpected balance (want $expected)"; exit 1
+
+      - name: Verify no failed or unhealthy containers
+        run: |
+          # Crash-looping containers (restart: unless-stopped) show as restarting, not exited.
+          failed=$(docker ps -a --filter status=exited --filter status=dead --filter status=restarting --format '{{.Names}} {{.Status}}' | grep -v 'Exited (0)' || true)
+          [ -z "$failed" ] || { echo "Failed containers detected:"; echo "$failed"; docker ps -a; exit 1; }
+          unhealthy=$(docker ps --filter health=unhealthy -q)
+          [ -z "$unhealthy" ] || { echo "Unhealthy containers detected:"; docker ps; exit 1; }
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker ps -a
+          docker logs gateway --tail=200 2>&1 || true
+          docker logs endorser-org2 --tail=200 2>&1 || true
+          docker compose -f ../devnet/compose.yaml logs --tail=100 2>/dev/null || true
+
+      - name: Purge
+        if: always()
+        run: make purge
