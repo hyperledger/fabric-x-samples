@@ -26,8 +26,8 @@ import (
 	"github.com/hyperledger/fabric-x-sdk/fabrictest"
 	"github.com/hyperledger/fabric-x-sdk/identity"
 	"github.com/hyperledger/fabric-x-sdk/network"
-	nfab "github.com/hyperledger/fabric-x-sdk/network/fabric"
-	nfabx "github.com/hyperledger/fabric-x-sdk/network/fabricx"
+	"github.com/hyperledger/fabric-x-sdk/network/fabric"
+	"github.com/hyperledger/fabric-x-sdk/network/fabricx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 )
@@ -57,10 +57,10 @@ func TestFabricXCommitter(t *testing.T) {
 // endorserSetup holds the live components for one test scenario.
 type endorserSetup struct {
 	svc          *service.Service
-	ec           *network.EndorsementClient
+	ec           *fabric.EndorsementClient
 	endorserAddr string
 	namespace    string
-	submitter    *network.FabricSubmitter
+	submitter    *network.Submitter
 	networkType  string
 	ordererAddr  string
 }
@@ -85,7 +85,7 @@ func newWithTestBackend(t *testing.T, networkType string) *endorserSetup {
 	}
 
 	// The in-process fabrictest backend uses no TLS for the orderer connection.
-	return newSetup(t, cfg, []sdk.Signer{testSigner{}}, testSigner{}, fmt.Sprintf("127.0.0.1:%d", fnet.OrdererPort), network.TLSConfig{Mode: network.TLSModeNone}, "basic")
+	return newSetup(t, cfg, []sdk.Signer{fabrictest.MockSigner{}}, fabrictest.MockSigner{}, fmt.Sprintf("127.0.0.1:%d", fnet.OrdererPort), network.TLSConfig{Mode: network.TLSModeNone}, "basic")
 }
 
 // newTestCommitterSetup returns a test setup pointed at a running Fabric-X committer.
@@ -214,7 +214,7 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 	}
 
 	// Create endorsement client targeting all endorser instances.
-	ec, err := network.NewEndorsementClient(peerConfs, clientSigner, cfg.ChannelID, namespace, "1.0")
+	ec, err := fabric.NewEndorsementClient(peerConfs, clientSigner, cfg.ChannelID)
 	if err != nil {
 		t.Fatalf("NewEndorsementClient: %v", err)
 	}
@@ -227,12 +227,12 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 		TLS:     ordererTLS,
 	}}
 
-	var submitter *network.FabricSubmitter
+	var submitter *network.Submitter
 	switch cfg.Protocol {
 	case "fabric":
-		submitter, err = nfab.NewSubmitter(t.Context(), orderers, clientSigner, 0, log)
+		submitter, err = fabric.NewSubmitter(t.Context(), orderers, clientSigner, 0, log)
 	case "fabric-x":
-		submitter, err = nfabx.NewSubmitter(t.Context(), orderers, clientSigner, 0, log)
+		submitter, err = fabricx.NewSubmitter(t.Context(), orderers, clientSigner, 0, log)
 	}
 	if err != nil {
 		t.Fatalf("NewSubmitter: %v", err)
@@ -257,7 +257,7 @@ func newSetup(t *testing.T, cfg config.Config, serviceSigners []sdk.Signer, clie
 // proposeAndSubmit sends args to the endorser via gRPC and submits the resulting endorsement.
 func (s *endorserSetup) proposeAndSubmit(t *testing.T, args [][]byte) {
 	t.Helper()
-	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", args)
+	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, args)
 	if err != nil {
 		t.Fatalf("ExecuteTransaction: %v", err)
 	}
@@ -275,7 +275,7 @@ func (s *endorserSetup) waitForValue(t *testing.T, key, expected string, timeout
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte(key)})
+		end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, [][]byte{[]byte(key)})
 		if err == nil && len(end.Responses) > 0 {
 			if got := string(end.Responses[0].Response.Payload); got == expected {
 				return
@@ -303,25 +303,16 @@ func (kvExecutor) Execute(_ context.Context, newStore service.StoreFactory, inv 
 		if err != nil {
 			return endorsement.ExecutionResult{}, fmt.Errorf("get: %w", err)
 		}
-		return endorsement.Success(store.Result(), nil, val), nil
+		return endorsement.Success(store.Result(), "", nil, val), nil
 	case 2: // write
 		if err := store.PutState(string(inv.Args[0]), inv.Args[1]); err != nil {
 			return endorsement.ExecutionResult{}, fmt.Errorf("put: %w", err)
 		}
-		return endorsement.Success(store.Result(), nil, inv.Args[1]), nil
+		return endorsement.Success(store.Result(), "", nil, inv.Args[1]), nil
 	default:
 		return endorsement.BadRequest("usage: [key] or [key] [value]"), nil
 	}
 }
-
-// --- test signer ---
-
-// testSigner is a minimal sdk.Signer returning fixed bytes.
-// fabrictest does not verify signatures, so this is sufficient.
-type testSigner struct{}
-
-func (testSigner) Sign(_ []byte) ([]byte, error) { return []byte("sig"), nil }
-func (testSigner) Serialize() ([]byte, error)    { return []byte("identity"), nil }
 
 // --- test cases ---
 
@@ -363,7 +354,7 @@ func testEndorserSetAndGet(t *testing.T, s *endorserSetup) {
 func testEndorserGetMissingKey(t *testing.T, s *endorserSetup) {
 	key := t.Name() + "/nonexistent"
 
-	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte(key)})
+	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, [][]byte{[]byte(key)})
 	if err != nil {
 		t.Fatalf("ExecuteTransaction: %v", err)
 	}
@@ -381,7 +372,7 @@ func testEndorserGetMissingKey(t *testing.T, s *endorserSetup) {
 
 // testEndorserBadRequest confirms that too many args returns a 400 status in the response.
 func testEndorserBadRequest(t *testing.T, s *endorserSetup) {
-	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte("a"), []byte("b"), []byte("c")})
+	end, err := s.ec.ExecuteTransaction(t.Context(), s.namespace, [][]byte{[]byte("a"), []byte("b"), []byte("c")})
 	if err != nil {
 		t.Fatalf("ExecuteTransaction: %v", err)
 	}
@@ -396,12 +387,12 @@ func testEndorserBadRequest(t *testing.T, s *endorserSetup) {
 // testEndorserWrongChannel confirms that a proposal for a different channel is rejected at the gRPC level.
 func testEndorserWrongChannel(t *testing.T, s *endorserSetup) {
 	// Use a client pointing at the same server but asking for a different channel.
-	ec, err := network.NewEndorsementClient(
+	ec, err := fabric.NewEndorsementClient(
 		[]network.PeerConf{{
 			Address: s.endorserAddr,
 			TLS:     network.TLSConfig{Mode: network.TLSModeNone},
 		}},
-		testSigner{}, "wrongchannel", s.namespace, "1.0",
+		fabrictest.MockSigner{}, "wrongchannel",
 	)
 	if err != nil {
 		t.Fatalf("NewEndorsementClient: %v", err)
@@ -409,7 +400,7 @@ func testEndorserWrongChannel(t *testing.T, s *endorserSetup) {
 	defer ec.Close() //nolint:errcheck
 
 	key := t.Name() + "/k"
-	_, err = ec.ExecuteTransaction(t.Context(), s.namespace, "1.0", [][]byte{[]byte("get"), []byte(key)})
+	_, err = ec.ExecuteTransaction(t.Context(), s.namespace, [][]byte{[]byte("get"), []byte(key)})
 	if err == nil {
 		t.Fatal("expected error for wrong channel, got nil")
 	}
@@ -443,7 +434,7 @@ func TestWaitForReadyWaitsForSync(t *testing.T) {
 		DBConnStr: fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()),
 		Committer: network.PeerConf{Address: fmt.Sprintf("127.0.0.1:%d", fnet.PeerPort)},
 	}
-	svc, err := service.NewWithSigner(svcCfg, testSigner{}, map[string]service.Executor{
+	svc, err := service.NewWithSigner(svcCfg, fabrictest.MockSigner{}, map[string]service.Executor{
 		"basic": kvExecutor{},
 	}, sdk.NewTestLogger(t, "endorser"))
 	if err != nil {

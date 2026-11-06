@@ -47,7 +47,7 @@ func (SampleExecutor) Execute(ctx context.Context, newStore service.StoreFactory
 
 		// Return success, with the ReadWriteSet, an optional Fabric event and a payload message.
 		// In this case the query result.
-		return endorsement.Success(store.Result(), nil, res), nil
+		return endorsement.Success(store.Result(), "", nil, res), nil
 
 	case "set":
 		// Bad request if not enough arguments were passed.
@@ -62,7 +62,7 @@ func (SampleExecutor) Execute(ctx context.Context, newStore service.StoreFactory
 		}
 
 		// Return success.
-		return endorsement.Success(store.Result(), nil, fmt.Appendf(nil, "%s=%s", string(inv.Args[1]), string(inv.Args[2]))), nil
+		return endorsement.Success(store.Result(), "", nil, fmt.Appendf(nil, "%s=%s", string(inv.Args[1]), string(inv.Args[2]))), nil
 
 	default:
 		return endorsement.BadRequest("usage: get [key] || set [key] [value]"), nil

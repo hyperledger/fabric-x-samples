@@ -1,4 +1,4 @@
-COMMITTER_IMAGE ?= docker.io/hyperledger/fabric-x-committer-test-node:1.0.3
+COMMITTER_IMAGE ?= docker.io/hyperledger/fabric-x-committer-test-node:1.0.7
 
 .PHONY: init-network
 # The test committer ships its own crypto material (peer-org-0 / peer-org-1),
