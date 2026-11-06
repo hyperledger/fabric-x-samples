@@ -19,8 +19,8 @@ import (
 	"github.com/hyperledger/fabric-x-samples/custom-endorser/config"
 	"github.com/hyperledger/fabric-x-sdk/identity"
 	"github.com/hyperledger/fabric-x-sdk/network"
-	nfab "github.com/hyperledger/fabric-x-sdk/network/fabric"
-	nfabx "github.com/hyperledger/fabric-x-sdk/network/fabricx"
+	"github.com/hyperledger/fabric-x-sdk/network/fabric"
+	"github.com/hyperledger/fabric-x-sdk/network/fabricx"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +72,11 @@ submits the results to an orderer.
 	cmd.PersistentFlags().String("namespace", "", "Namespace to invoke (overrides config)")
 	cmd.MarkPersistentFlagRequired("config")
 
+	cmd.SetOut(os.Stdout) // results on stdout, logs and errors on stderr
 	cmd.AddCommand(newQueryCmd(), newInvokeCmd())
+
+	// gRPC logs every connection state change at INFO; only show its errors.
+	flogging.Init(flogging.Config{LogSpec: "info:grpc=error"})
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -97,13 +101,13 @@ func newQueryCmd() *cobra.Command {
 				return fmt.Errorf("load identity: %w", err)
 			}
 
-			ec, err := buildEndorsementClient(cfg, signer, ns)
+			ec, err := buildEndorsementClient(cfg, signer)
 			if err != nil {
 				return err
 			}
 			defer ec.Close() //nolint:errcheck
 
-			end, err := ec.ExecuteTransaction(cmd.Context(), ns, "1.0", txArgs)
+			end, err := ec.ExecuteTransaction(cmd.Context(), ns, txArgs)
 			if err != nil {
 				return fmt.Errorf("endorsement failed: %w", err)
 			}
@@ -114,7 +118,7 @@ func newQueryCmd() *cobra.Command {
 			if resp.Status < 200 || resp.Status >= 400 {
 				return fmt.Errorf("endorser returned error status %d: %s", resp.Status, resp.Message)
 			}
-			cmd.Print(string(resp.Payload))
+			cmd.Println(string(resp.Payload))
 			return nil
 		},
 	}
@@ -146,19 +150,19 @@ need to confirm that the transaction has been committed.`,
 
 			logger := flogging.MustGetLogger("client")
 
-			ec, err := buildEndorsementClient(cfg, signer, ns)
+			ec, err := buildEndorsementClient(cfg, signer)
 			if err != nil {
 				return err
 			}
 			defer ec.Close() //nolint:errcheck
 
 			ordererConfs := []network.OrdererConf{cfg.Orderer.ToOrdererConf()}
-			var submitter *network.FabricSubmitter
+			var submitter *network.Submitter
 			switch cfg.Protocol {
 			case "fabric":
-				submitter, err = nfab.NewSubmitter(cmd.Context(), ordererConfs, signer, 0, logger)
+				submitter, err = fabric.NewSubmitter(cmd.Context(), ordererConfs, signer, 0, logger)
 			case "fabric-x", "":
-				submitter, err = nfabx.NewSubmitter(cmd.Context(), ordererConfs, signer, 0, logger)
+				submitter, err = fabricx.NewSubmitter(cmd.Context(), ordererConfs, signer, 0, logger)
 			default:
 				return fmt.Errorf("unknown protocol %q: must be \"fabric\" or \"fabric-x\"", cfg.Protocol)
 			}
@@ -168,7 +172,7 @@ need to confirm that the transaction has been committed.`,
 			defer submitter.Close() //nolint:errcheck
 
 			logger.Debugf("sending proposal to %d endorser(s)", len(cfg.Endorsers))
-			end, err := ec.ExecuteTransaction(cmd.Context(), ns, "1.0", txArgs)
+			end, err := ec.ExecuteTransaction(cmd.Context(), ns, txArgs)
 			if err != nil {
 				return fmt.Errorf("endorsement failed: %w", err)
 			}
@@ -185,7 +189,7 @@ need to confirm that the transaction has been committed.`,
 				return fmt.Errorf("submit failed: %w", err)
 			}
 			logger.Debugf("transaction submitted")
-			cmd.Print(string(resp.Payload))
+			cmd.Println(string(resp.Payload))
 			return nil
 		},
 	}
@@ -259,12 +263,12 @@ func validate(cfg Config) error {
 	return nil
 }
 
-func buildEndorsementClient(cfg Config, signer identity.Signer, namespace string) (*network.EndorsementClient, error) {
+func buildEndorsementClient(cfg Config, signer identity.Signer) (*fabric.EndorsementClient, error) {
 	peerConfs := make([]network.PeerConf, len(cfg.Endorsers))
 	for i := range cfg.Endorsers {
 		peerConfs[i] = cfg.Endorsers[i].ToPeerConf()
 	}
-	ec, err := network.NewEndorsementClient(peerConfs, signer, cfg.ChannelID, namespace, "1.0")
+	ec, err := fabric.NewEndorsementClient(peerConfs, signer, cfg.ChannelID)
 	if err != nil {
 		return nil, fmt.Errorf("create endorsement client: %w", err)
 	}

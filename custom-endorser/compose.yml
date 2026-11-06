@@ -6,7 +6,7 @@ services:
   # so nothing is mounted in. The --add-host entries let the internal services
   # reach each other on localhost.
   test-committer:
-    image: docker.io/hyperledger/fabric-x-committer-test-node:1.0.3
+    image: docker.io/hyperledger/fabric-x-committer-test-node:1.0.7
     pull_policy: missing
     restart: unless-stopped
     container_name: fabric-x-committer-test-node
@@ -34,7 +34,7 @@ services:
   # endorsement policy needs both orgs, so the transaction is endorsed by
   # peer-org-0 and peer-org-1 before being submitted.
   fxconfig-init:
-    image: docker.io/hyperledger/fabric-x-tools:1.0.0
+    image: docker.io/hyperledger/fabric-x-tools:1.0.3
     pull_policy: missing
     container_name: fxconfig-init
     network_mode: "service:test-committer"

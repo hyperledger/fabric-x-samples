@@ -20,8 +20,8 @@ import (
 	efabx "github.com/hyperledger/fabric-x-sdk/endorsement/fabricx"
 	"github.com/hyperledger/fabric-x-sdk/identity"
 	"github.com/hyperledger/fabric-x-sdk/network"
-	nfab "github.com/hyperledger/fabric-x-sdk/network/fabric"
-	nfabx "github.com/hyperledger/fabric-x-sdk/network/fabricx"
+	"github.com/hyperledger/fabric-x-sdk/network/fabric"
+	"github.com/hyperledger/fabric-x-sdk/network/fabricx"
 	"github.com/hyperledger/fabric-x-sdk/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -102,11 +102,11 @@ func NewWithSigner(cfg ServiceConfig, signer sdk.Signer, executors map[string]Ex
 	switch cfg.Protocol {
 	case "fabric":
 		builder = efab.NewEndorsementBuilder(signer)
-		sync, err = nfab.NewSynchronizer(readDB, cfg.ChannelID, cfg.Committer, signer, logger, writeDB)
+		sync, err = fabric.NewSynchronizer(readDB, cfg.ChannelID, cfg.Committer, signer, logger, writeDB)
 	case "fabric-x", "":
 		monotonicVersions = true
 		builder = efabx.NewEndorsementBuilder(signer)
-		sync, err = nfabx.NewSynchronizer(readDB, cfg.ChannelID, cfg.Committer, signer, logger, writeDB)
+		sync, err = fabricx.NewSynchronizer(readDB, cfg.ChannelID, cfg.Committer, logger, writeDB)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("create synchronizer: %w", err)
@@ -165,7 +165,7 @@ func (s *Service) Run(ctx context.Context) error {
 // ProcessProposal is the API for incoming requests.
 func (s *Service) ProcessProposal(ctx context.Context, prop *peer.SignedProposal) (*peer.ProposalResponse, error) {
 	// parse and validate
-	inv, err := endorsement.Parse(prop, time.Now())
+	inv, err := efab.Parse(prop, time.Now())
 	if err != nil {
 		s.logger.Infof("tx=%s err=%s", inv.TxID, err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -175,20 +175,20 @@ func (s *Service) ProcessProposal(ctx context.Context, prop *peer.SignedProposal
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("channel must be %s", s.channel))
 	}
 	// Look up the executor for this namespace.
-	executor, ok := s.executors[inv.CCID.Name]
+	executor, ok := s.executors[inv.Namespace]
 	if !ok {
-		s.logger.Infof("tx=%s err=unknown namespace: %s", inv.TxID, inv.CCID.Name)
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("unknown namespace: %s", inv.CCID.Name))
+		s.logger.Infof("tx=%s err=unknown namespace: %s", inv.TxID, inv.Namespace)
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("unknown namespace: %s", inv.Namespace))
 	}
 	// the `peer chaincode invoke` command leaves the version empty, causing an INVALID_CHAINCODE at commit time.
 	// since we don't really use the version anyway, we just default to 1.0.
-	if inv.CCID.Version == "" {
-		inv.CCID.Version = "1.0"
+	if inv.ChaincodeVersion == "" {
+		inv.ChaincodeVersion = "1.0"
 	}
 
 	// build a factory that closes over the per-request context and namespace
 	newStore := func(blockNum uint64) (StateStore, error) {
-		return state.NewSimulationStore(ctx, s.readDB, inv.CCID.Name, blockNum, s.monotonicVersions)
+		return state.NewSimulationStore(ctx, s.readDB, inv.Namespace, blockNum, s.monotonicVersions)
 	}
 
 	// execute the transaction
@@ -210,7 +210,7 @@ func (s *Service) ProcessProposal(ctx context.Context, prop *peer.SignedProposal
 	} else {
 		pl = fmt.Sprintf("(%db)", len(end.Response.Payload))
 	}
-	s.logger.Infof("tx=%s st=%d ns=%s fn=%s args=%d res=%s", inv.TxID, end.Response.Status, inv.CCID.Name, string(inv.Args[0]), len(inv.Args)-1, pl)
+	s.logger.Infof("tx=%s st=%d ns=%s fn=%s args=%d res=%s", inv.TxID, end.Response.Status, inv.Namespace, string(inv.Args[0]), len(inv.Args)-1, pl)
 
 	return end, nil
 }

@@ -12,7 +12,7 @@ logic.
 
 ## Prerequisites
 
-- Go 1.26+
+- Go 1.27+
 - Docker (for the test network committer and orderer)
 
 ## Quick Start
